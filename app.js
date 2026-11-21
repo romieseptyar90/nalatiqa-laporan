@@ -350,32 +350,7 @@ const getInitialDemoData = () => {
       { id: 'EXP-002', date: '2026-09-18', category: 'packing', title: 'Bubble Wrap Tebal 50 Meter & Kardus Box Suplemen', amount: 45000, paymentMethod: 'Transfer BCA', notes: 'Packing botol suplemen agar aman' },
       { id: 'EXP-003', date: '2026-09-20', category: 'tools', title: 'Kertas Thermal Label Resi SPX 100x150mm', amount: 25000, paymentMethod: 'ShopeePay', notes: 'Cetak resi kurir' }
     ],
-    stockPurchases: [
-      {
-        id: 'STK-001',
-        date: '2026-09-15',
-        productName: 'Sandhus Vitamin D3 + K2 10000IU + Calcium Magnesium Zinc + Vitamin C + Astaxanthin Premium, 60 Kapsul',
-        sku: '52667818737',
-        supplier: 'Distributor Resmi Herbal Indo',
-        qty: 10,
-        unitPrice: 32000,
-        totalCost: 320000,
-        paymentMethod: 'Transfer Bank',
-        notes: 'Kulakan stok awal batch September - Faktur #DST-8821'
-      },
-      {
-        id: 'STK-002',
-        date: '2026-09-16',
-        productName: 'Verdavita 3-IN-1 120pcs Vitamin D3 Tulang & Gigi Kalsium Magnesium & Seng Kapsul Suplement Mineral',
-        sku: '47417845516',
-        supplier: 'Grosir Suplemen Jaya',
-        qty: 10,
-        unitPrice: 39000,
-        totalCost: 390000,
-        paymentMethod: 'Transfer Bank',
-        notes: 'Restock barang laris suplemen tulang - Faktur #GSJ-4412'
-      }
-    ],
+    stockPurchases: [],
     metaAds: [
       {
         id: 'META-001',
@@ -460,14 +435,7 @@ class DBService {
         }
 
         if (!parsed.importHistory) parsed.importHistory = [];
-        if (!parsed.stockPurchases || parsed.stockPurchases.length === 0) {
-          if (parsed.transactions && parsed.transactions.some(t => t.id === 'TRX-001')) {
-            parsed.stockPurchases = getInitialDemoData().stockPurchases;
-            this.saveData(parsed);
-          } else {
-            parsed.stockPurchases = [];
-          }
-        }
+        if (!parsed.stockPurchases) parsed.stockPurchases = [];
         if (!parsed.metaAds || parsed.metaAds.length === 0) {
           if (parsed.transactions && parsed.transactions.some(t => t.id === 'TRX-001')) {
             parsed.metaAds = getInitialDemoData().metaAds;
@@ -5085,9 +5053,8 @@ function renderExpensesTable() {
 
   const store = db.getStore();
 
-  // Auto-heal / auto-migrate any legacy stockPurchases into expenses (with category: 'hpp_belanja')
+  // One-time migration of any legacy stockPurchases into expenses (with category: 'hpp_belanja')
   if (store.stockPurchases && store.stockPurchases.length > 0) {
-    let hasMigrated = false;
     if (!store.expenses) store.expenses = [];
     store.stockPurchases.forEach(sp => {
       const alreadyExists = store.expenses.some(e => e.id === sp.id || (e.title === sp.productName && e.date === sp.date));
@@ -5103,12 +5070,11 @@ function renderExpensesTable() {
           paymentMethod: sp.paymentMethod || 'Transfer Bank',
           notes: sp.notes || (sp.sku ? `SKU: ${sp.sku}` : '')
         });
-        hasMigrated = true;
       }
     });
-    if (hasMigrated) {
-      db.saveData(store);
-    }
+    // Permanently drain stockPurchases so deleted items NEVER resurrect!
+    store.stockPurchases = [];
+    db.saveData(store);
   }
 
   let list = getFilteredRecords(store.expenses || [], 'date');
@@ -5124,12 +5090,6 @@ function renderExpensesTable() {
       totalOpex += amt;
     }
   });
-
-  // Also include any legacy stockPurchases
-  const stockList = getFilteredRecords(store.stockPurchases || [], 'date');
-  let legacyStockTotal = 0;
-  stockList.forEach(s => { legacyStockTotal += Number(s.totalCost || 0); });
-  totalHpp += legacyStockTotal;
 
   const totalCombined = totalHpp + totalOpex;
 
@@ -5287,16 +5247,19 @@ function bulkDeleteSelectedExpenses() {
     return;
   }
 
-  if (confirm(`Apakah Anda yakin ingin menghapus ${count} beban operasional yang dipilih?\n\nTindakan ini akan menghapus data pengeluaran terpilih dan memperbarui seluruh laporan keuangan.`)) {
+  if (confirm(`Apakah Anda yakin ingin menghapus ${count} catatan pengeluaran yang dipilih?\n\nTindakan ini akan menghapus data terpilih dan memperbarui seluruh laporan keuangan.`)) {
     const selectedIds = new Set(Array.from(checked).map(cb => cb.value));
     const store = db.getStore();
     store.expenses = (store.expenses || []).filter(e => !selectedIds.has(e.id));
+    if (store.stockPurchases && store.stockPurchases.length > 0) {
+      store.stockPurchases = store.stockPurchases.filter(s => !selectedIds.has(s.id));
+    }
     db.saveData(store);
 
     if (typeof showToast === 'function') {
-      showToast(`${count} beban operasional berhasil dihapus!`, 'success');
+      showToast(`${count} pengeluaran berhasil dihapus!`, 'success');
     } else {
-      alert(`${count} beban operasional berhasil dihapus!`);
+      alert(`${count} pengeluaran berhasil dihapus!`);
     }
     renderCurrentView();
   }
@@ -5837,11 +5800,17 @@ function saveExpenseFromModal() {
 }
 
 function deleteExpense(id) {
-  if (confirm('Hapus catatan pengeluaran operasional ini?')) {
+  if (confirm('Hapus catatan pengeluaran ini?')) {
     const store = db.getStore();
-    store.expenses = store.expenses.filter(e => e.id !== id);
+    store.expenses = (store.expenses || []).filter(e => e.id !== id);
+    if (store.stockPurchases && store.stockPurchases.length > 0) {
+      store.stockPurchases = store.stockPurchases.filter(s => s.id !== id);
+    }
     db.saveData(store);
     renderCurrentView();
+    if (typeof showToast === 'function') {
+      showToast('Catatan pengeluaran berhasil dihapus!', 'success');
+    }
   }
 }
 
