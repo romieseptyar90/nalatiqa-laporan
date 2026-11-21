@@ -1034,7 +1034,7 @@ function switchTab(tabName) {
     products: { title: 'Katalog Produk & SKU', subtitle: 'Data produk, SKU barang, harga jual, dan stok' },
     ads: { title: 'Buku Kas Iklan Marketplace', subtitle: 'Pantau biaya ads Shopee, TikTok & Lazada, omset iklan, dan Return on Ad Spend (ROAS)' },
     pnl: { title: 'Laporan Laba Rugi (P&L)', subtitle: 'Laporan laba bersih siap cetak atau ekspor ke PDF' },
-    settings: { title: 'Pengaturan & Backup Data', subtitle: 'Profil toko, persentase potongan biaya Shopee, TikTok & Lazada' }
+    settings: { title: 'Pengaturan & Backup Data', subtitle: 'Profil identitas usaha, pencadangan dan pemulihan data keuangan' }
   };
 
   const header = titles[tabName] || { title: 'BukuToko Marketplace', subtitle: '' };
@@ -5359,19 +5359,12 @@ function renderPnL() {
 // Settings View
 function renderSettings() {
   const store = db.getStore();
-  const s = store.settings;
+  const s = store.settings || {};
 
-  document.getElementById('setting-store-name').value = s.storeName || '';
-  document.getElementById('setting-owner-name').value = s.ownerName || '';
-  document.getElementById('setting-shopee-admin').value = s.shopeeDefaultAdminFee || 9.0;
-  document.getElementById('setting-shopee-service').value = s.shopeeDefaultServiceFee || 4.5;
-  document.getElementById('setting-tiktok-commission').value = s.tiktokDefaultCommission || 5.0;
-  document.getElementById('setting-tiktok-service').value = s.tiktokDefaultServiceFee || 1.0;
-  const lazComm = document.getElementById('setting-lazada-commission');
-  if (lazComm) lazComm.value = s.lazadaDefaultCommission || 5.0;
-  const lazPay = document.getElementById('setting-lazada-payment-fee');
-  if (lazPay) lazPay.value = s.lazadaDefaultPaymentFee || 2.0;
-  document.getElementById('setting-default-hpp').value = s.defaultHppPercentage || 45.0;
+  const elStore = document.getElementById('setting-store-name');
+  if (elStore) elStore.value = s.storeName || '';
+  const elOwner = document.getElementById('setting-owner-name');
+  if (elOwner) elOwner.value = s.ownerName || '';
 }
 
 // Transaction Modal Actions
@@ -6793,20 +6786,12 @@ function saveDebtPaymentFromModal() {
 // Save Settings
 function saveStoreSettings() {
   const store = db.getStore();
-  store.settings.storeName = document.getElementById('setting-store-name').value.trim() || 'Toko Saya';
-  store.settings.ownerName = document.getElementById('setting-owner-name').value.trim();
-  store.settings.shopeeDefaultAdminFee = parseFloat(document.getElementById('setting-shopee-admin').value) || 9.0;
-  store.settings.shopeeDefaultServiceFee = parseFloat(document.getElementById('setting-shopee-service').value) || 4.5;
-  store.settings.tiktokDefaultCommission = parseFloat(document.getElementById('setting-tiktok-commission').value) || 5.0;
-  store.settings.tiktokDefaultServiceFee = parseFloat(document.getElementById('setting-tiktok-service').value) || 1.0;
-  const elLazadaComm = document.getElementById('setting-lazada-commission');
-  if (elLazadaComm) store.settings.lazadaDefaultCommission = parseFloat(elLazadaComm.value) || 5.0;
-  const elLazadaPay = document.getElementById('setting-lazada-payment-fee');
-  if (elLazadaPay) store.settings.lazadaDefaultPaymentFee = parseFloat(elLazadaPay.value) || 2.0;
-  store.settings.defaultHppPercentage = parseFloat(document.getElementById('setting-default-hpp').value) || 45.0;
+  if (!store.settings) store.settings = {};
+  store.settings.storeName = document.getElementById('setting-store-name')?.value.trim() || 'PT NALATIQA GROUP';
+  store.settings.ownerName = document.getElementById('setting-owner-name')?.value.trim() || '';
 
   db.saveData(store);
-  alert('Pengaturan toko berhasil disimpan!');
+  alert('Pengaturan profil toko berhasil disimpan!');
   renderDashboard();
 }
 

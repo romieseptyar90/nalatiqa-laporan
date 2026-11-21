@@ -1603,71 +1603,26 @@
         <div id="view-settings" class="tab-view" style="display: none;">
           <div class="card" style="max-width: 800px; margin: 0 auto 24px;">
             <div class="card-header">
-              <div class="card-title">Profil Toko & Estimasi Potongan Default</div>
+              <div class="card-title">Profil Usaha & Perusahaan</div>
+              <div class="card-subtitle">Informasi identitas utama toko dan pengelola</div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Nama Toko Utama</label>
-                <input type="text" id="setting-store-name" class="form-control" value="TOKO NALATIQA">
+                <label class="form-label">Nama Toko Utama / Perusahaan</label>
+                <input type="text" id="setting-store-name" class="form-control" value="PT NALATIQA GROUP">
               </div>
               <div class="form-group">
                 <label class="form-label">Nama Pemilik / Pengelola</label>
-                <input type="text" id="setting-owner-name" class="form-control" value="Nalatiqa">
+                <input type="text" id="setting-owner-name" class="form-control" value="Naura Tisa Asheeqa">
               </div>
             </div>
 
-            <div style="font-size: 13px; font-weight: 700; margin: 16px 0 8px; color: var(--shopee);">Persentase Default Shopee:</div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Biaya Administrasi Shopee (%)</label>
-                <input type="number" step="0.1" id="setting-shopee-admin" class="form-control" value="6.5">
-                <div class="form-help">Star Seller rata-rata 4.7% - 8.5%</div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Biaya Gratis Ongkir XTRA (%)</label>
-                <input type="number" step="0.1" id="setting-shopee-service" class="form-control" value="4.0">
-                <div class="form-help">Program Gratis Ongkir XTRA (~4%)</div>
-              </div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 14px 18px; margin: 16px 0 20px; font-size: 13px; color: #475569; line-height: 1.6;">
+              💡 <strong>Kalkulasi Otomatis Marketplace:</strong> Seluruh potongan biaya administrasi, komisi platform, biaya layanan, dan gratis ongkir dihitung <strong>100% otomatis sesuai nominal rupiah riil dari file laporan resmi</strong> yang Anda impor dari Shopee, TikTok Shop, & Lazada. Modal HPP belanja barang dicatat langsung secara praktis pada menu <strong>Beban Operasional & HPP Belanja</strong>.
             </div>
 
-            <div style="font-size: 13px; font-weight: 700; margin: 16px 0 8px; color: var(--text-main);">Persentase Default TikTok Shop:</div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Komisi Platform TikTok (%)</label>
-                <input type="number" step="0.1" id="setting-tiktok-commission" class="form-control" value="5.0">
-                <div class="form-help">Rata-rata komisi kategori 4% - 6%</div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Biaya Transaksi / Layanan (%)</label>
-                <input type="number" step="0.1" id="setting-tiktok-service" class="form-control" value="1.0">
-              </div>
-            </div>
-
-            <div style="font-size: 13px; font-weight: 700; margin: 16px 0 8px; color: var(--lazada);">Persentase Default Lazada:</div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Komisi Platform Lazada (%)</label>
-                <input type="number" step="0.1" id="setting-lazada-commission" class="form-control" value="5.0">
-                <div class="form-help">Rata-rata komisi kategori 3% - 6%</div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Biaya Pembayaran / Payment Fee (%)</label>
-                <input type="number" step="0.1" id="setting-lazada-payment-fee" class="form-control" value="2.0">
-                <div class="form-help">Biaya transaksi pembayaran (~1.82% - 2.0%)</div>
-              </div>
-            </div>
-
-            <div style="font-size: 13px; font-weight: 700; margin: 16px 0 8px; color: var(--primary);">Default Modal HPP (Saat Impor File):</div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Persentase HPP Default (% dari Nilai Jual)</label>
-                <input type="number" step="1" id="setting-default-hpp" class="form-control" value="50">
-                <div class="form-help">Digunakan jika produk yang diimpor belum terdaftar di katalog SKU</div>
-              </div>
-            </div>
-
-            <button class="btn btn-primary" onclick="saveStoreSettings()" style="margin-top: 12px;">Simpan Pengaturan</button>
+            <button class="btn btn-primary" onclick="saveStoreSettings()">Simpan Pengaturan Profil</button>
           </div>
 
           <div class="card" style="max-width: 800px; margin: 0 auto;">
@@ -2265,6 +2220,6 @@
   <!-- SheetJS Library for 100% reliable Excel (.xlsx & .xls) reading -->
   <script src="xlsx.full.min.js?v=20261119_01"></script>
   <!-- Core App Logic -->
-  <script src="app.js?v=20261121_05"></script>
+  <script src="app.js?v=20261121_06"></script>
 </body>
 </html>
