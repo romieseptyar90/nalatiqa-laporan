@@ -196,7 +196,7 @@ const paginationState = {
   transactions: { page: 1, pageSize: 10 },
   capital: { page: 1, pageSize: 10 },
   stockPurchases: { page: 1, pageSize: 10 },
-  expenses: { page: 1, pageSize: 10 },
+  expenses: { page: 1, pageSize: 25 },
   metaAds: { page: 1, pageSize: 10 },
   ads: { page: 1, pageSize: 10 },
   products: { page: 1, pageSize: 10 },
@@ -5084,6 +5084,33 @@ function renderExpensesTable() {
   if (!tbody) return;
 
   const store = db.getStore();
+
+  // Auto-heal / auto-migrate any legacy stockPurchases into expenses (with category: 'hpp_belanja')
+  if (store.stockPurchases && store.stockPurchases.length > 0) {
+    let hasMigrated = false;
+    if (!store.expenses) store.expenses = [];
+    store.stockPurchases.forEach(sp => {
+      const alreadyExists = store.expenses.some(e => e.id === sp.id || (e.title === sp.productName && e.date === sp.date));
+      if (!alreadyExists) {
+        store.expenses.push({
+          id: sp.id || `EXP-STK-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          storeId: sp.storeId || 'company',
+          storeAccount: sp.storeAccount || 'Konsolidasi Perusahaan',
+          date: sp.date || new Date().toISOString().split('T')[0],
+          category: 'hpp_belanja',
+          title: sp.productName || 'Belanja Modal Barang',
+          amount: Number(sp.totalCost || (Number(sp.qty || 1) * Number(sp.unitPrice || 0))),
+          paymentMethod: sp.paymentMethod || 'Transfer Bank',
+          notes: sp.notes || (sp.sku ? `SKU: ${sp.sku}` : '')
+        });
+        hasMigrated = true;
+      }
+    });
+    if (hasMigrated) {
+      db.saveData(store);
+    }
+  }
+
   let list = getFilteredRecords(store.expenses || [], 'date');
 
   // Compute breakdown for KPIs from all expenses in the active date/channel/store scope
