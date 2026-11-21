@@ -1,0 +1,202 @@
+ID Pesanan/Penyesuaian,Jenis transaksi,Waktu pemesanan,Waktu pembayaran pesanan,Mata uang,Jumlah penyelesaian pembayaran,Total Pendapatan,Subtotal setelah diskon penjual,Subtotal sebelum diskon,Diskon penjual,Biaya produk sesuai jarak dari Program Horison+,Total pengembalian dana setelah diskon,Total pengembalian dana sebelum diskon,Pengembalian dana diskon penjual,Total Biaya,Biaya komisi platform,Biaya layanan pre-order,Biaya layanan Mall,Biaya Pembayaran,Credit card installment - Handling fee,Ongkir,Ongkir yang ditalangi penyedia jasa logistik,Ongkir penggantian (ditanggung pembeli),Ongkir penukaran (ditanggung pembeli),Ongkir yang ditanggung platform,Ongkir yang ditanggung pembeli,Pengembalian ongkir yang dibayar pembeli,Ongkir pengembalian barang (yang ditanggung pembeli),Subsidi ongkir,Biaya pengiriman sesuai jarak dari Program Horison+,Biaya layanan logistik,Penggantian biaya asuransi,Komisi Afiliasi,Komisi mitra afiliasi,Komisi Iklan Toko afiliasi,Deposit komisi afiliasi,Pengembalian dana komisi afiliasi,Komisi iklan toko Mitra Afiliasi,Biaya layanan Program Bebas Ongkir,Komisi dinamis,Biaya layanan Program Growth Xtra,Biaya layanan Khusus LIVE,Biaya layanan Growth Xtra Program Super,Biaya pemrosesan pesanan,Biaya layanan Program EAMS,Biaya layanan Brands Crazy Deal/Flash Sale,Biaya Dilayani Tokopedia,Biaya penanganan Dilayani Tokopedia,Biaya program PayLater,Biaya sumber daya campaign,Biaya layanan penginstalan,PPh Pasal 22 dipungut,Biaya layanan khusus platform,Biaya iklan GMV Max,Voucher GMV Max,Pajak penjualan atas voucher GMV Max,Program layanan terkelola (Pajak penjualan),Program layanan terkelola (Biaya per pesanan),Ongkir pesanan gagal kirim,Ongkir pengembalian barang karena kesalahan pembeli,Biaya asuransi,,Jumlah penyesuaian,ID pesanan terkait,Pembayaran oleh pembeli,Pengembalian dana pembeli,Diskon voucher yang ditanggung penjual,Pengembalian dana diskon voucher yang ditanggung penjual,Diskon platform,Pengembalian dana diskon platform,Diskon voucher yang ditanggung platform,Pengembalian dana diskon voucher yang ditanggung platform,Diskon ongkir dari penjual,Perkiraan berat paket,Berat paket yang bisa dikenai biaya,Detail produk terjual,Sumber pesanan
+586262849648428292,Pesanan,2026/09/26,2026/09/30,IDR,0,0,65000,120000,-55000,0,-65000,-120000,55000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,0,586262849648428292,62014,-62014,0,0,5000,-5000,0,0,0,150,0,1737429837674808655 * 1;,TikTok Shop
+,,,,,
+,Periode,,,,2026/09/01-2026/09/30
+,Zona waktu,,,,UTC+7
+,Mata uang,,,,IDR
+,,,,,
+,Jumlah penyelesaian pembayaran,,,,0
+,,Total Pendapatan,,,0
+,,,Subtotal setelah diskon penjual,,65000
+,,,,Subtotal sebelum diskon,120000
+,,,,Diskon penjual,-55000
+,,,,Biaya produk sesuai jarak dari Program Horison+,0
+,,,Total pengembalian dana setelah diskon,,-65000
+,,,,Total pengembalian dana sebelum diskon,-120000
+,,,,Pengembalian dana diskon penjual,55000
+,,Total Biaya,,,0
+,,,Biaya komisi platform,,0
+,,,Biaya layanan pre-order,,0
+,,,Biaya layanan Mall,,0
+,,,Biaya Pembayaran,,0
+,,,Credit card installment - Handling fee,,0
+,,,Ongkir,,0
+,,,,Ongkir yang ditalangi penyedia jasa logistik,0
+,,,,Ongkir penggantian (ditanggung pembeli),0
+,,,,Ongkir penukaran (ditanggung pembeli),0
+,,,,Ongkir yang ditanggung platform,0
+,,,,Ongkir yang ditanggung pembeli,0
+,,,,Pengembalian ongkir yang dibayar pembeli,0
+,,,,Ongkir pengembalian barang (yang ditanggung pembeli),0
+,,,,Subsidi ongkir,0
+,,,,Biaya pengiriman sesuai jarak dari Program Horison+,0
+,,,,Biaya layanan logistik,0
+,,,,Penggantian biaya asuransi,0
+,,,Komisi Afiliasi,,0
+,,,Komisi mitra afiliasi,,0
+,,,Komisi Iklan Toko afiliasi,,0
+,,,Deposit komisi afiliasi,,0
+,,,Pengembalian dana komisi afiliasi,,0
+,,,Komisi iklan toko Mitra Afiliasi,,0
+,,,Biaya layanan Program Bebas Ongkir,,0
+,,,Komisi dinamis,,0
+,,,Biaya layanan Program Growth Xtra,,0
+,,,Biaya layanan Khusus LIVE,,0
+,,,Biaya layanan Growth Xtra Program Super,,0
+,,,Biaya pemrosesan pesanan,,0
+,,,Biaya layanan Program EAMS,,0
+,,,Biaya layanan Brands Crazy Deal/Flash Sale,,0
+,,,Biaya Dilayani Tokopedia,,0
+,,,,Biaya penanganan Dilayani Tokopedia,0
+,,,Biaya program PayLater,,0
+,,,Biaya sumber daya campaign,,0
+,,,Biaya layanan penginstalan,,0
+,,,PPh Pasal 22 dipungut,,0
+,,,Biaya layanan khusus platform,,0
+,,,Biaya iklan GMV Max,,0
+,,,Voucher GMV Max,,0
+,,,Pajak penjualan atas voucher GMV Max,,0
+,,,Program layanan terkelola (Pajak penjualan),,0
+,,,Program layanan terkelola (Biaya per pesanan),,0
+,,,Ongkir pesanan gagal kirim,,0
+,,,Ongkir pengembalian barang karena kesalahan pembeli,,0
+,,,Biaya asuransi,,0
+,,Penyesuaian,,,0
+,,,Penyesuaian ongkir,,0
+,,,Kompensasi Ongkir,,0
+,,,Chargeback,,0
+,,,Kompensasi kepada pembeli,,0
+,,,Penyesuaian Promosi,,0
+,,,Kompensasi Platform,,0
+,,,Penalti Platform,,0
+,,,Biaya pengiriman sampel,,0
+,,,Penggantian Biaya Logistik,,0
+,,,Subsidi kepuasan,,0
+,,,Potongan dana ditanggung penjual,,0
+,,,Potongan biaya pengiriman,,0
+,,,Biaya layanan gudang,,0
+,,,Penyesuaian komisi platform,,0
+,,,Kompensasi komisi platform,,0
+,,,Penyesuaian biaya transaksi,,0
+,,,Restitusi pajak,,0
+,,,Biaya paket manfaat pemasaran,,0
+,,,Biaya paket keuntungan pemasaran tambahan,,0
+,,,Pembayaran GMV untuk Promosi,,0
+,,,Pembayaran GMV untuk Iklan TikTok,,0
+,,,Kompensasi biaya sumber daya campaign,,0
+,,,Kompensasi asuransi pengiriman,,0
+,,,Penyesuaian Lainnya,,0
+,,,Pengembalian PPh Pasal 22 yang dipotong,,0
+Jenis transaksi,ID referensi,Waktu permintaan,Total,Status,Waktu keberhasilan,Rekening bank
+ , , , , , , 
+Penjelasan tentang biaya,
+Nama,Penjelasan
+ID Pesanan/Penyesuaian,ID transaksi
+Jenis transaksi,Jenis pesanan/penyesuaian.
+Waktu pemesanan,Waktu saat pembeli membuat pesanan ini.
+Waktu pembayaran pesanan,Waktu saat bayaran pesanan ini masuk ke saldo akun Anda.
+Mata uang,IDR
+Jumlah penyelesaian pembayaran,"Total nominal setelah jumlah penjualan bersih, biaya, dan penyesuaian."
+Subtotal setelah diskon penjual,Subtotal setelah diskon penjual adalah harga setelah dikurangi diskon penjual
+Subtotal sebelum diskon,Subtotal sebelum diskon adalah total harga sebelum dikurangi diskon penjual dan TikTok Shop
+Diskon penjual,"Diskon penjual adalah promosi yang biayanya ditanggung oleh penjual, seperti voucher atau diskon produk"
+Biaya produk sesuai jarak dari Program Horison+,"Biaya sesuai jarak untuk produk yang dibayar pembeli. Dengan pengaturan Program Horison+ Anda saat ini, biaya ini termasuk dalam harga produk untuk pesanan yang dikirim ke luar pulau Jawa."
+Total pengembalian dana setelah diskon,Subtotal SKU yang dikembalikan dananya setelah diskon penjual
+Total pengembalian dana sebelum diskon,Subtotal SKU yang dikembalikan dananya setelah diskon penjual
+Pengembalian dana diskon penjual,Diskon yang dikembalikan kepada penjual
+Biaya komisi platform,
+Biaya layanan pre-order,
+Biaya layanan Mall,"Biaya layanan Mall dikenakan demi memastikan pesanan Mall bisa dipenuhi dengan baik. Biaya ini dihitung berdasarkan harga produk setelah dipotong diskon penjual x persentase berdasarkan kategori, atau maks. Rp50.000. "
+Biaya Pembayaran,"Merupakan biaya yang dikenakan ketika pembeli melakukan pembayaran, pengembalian dana, penyesuaian tarif, dll.
+Cara hitung =  (Pembayaran pembeli - pengembalian dana) * tarif %"
+Credit card installment - Handling fee,
+Ongkir,Ongkir bersih yang ditanggung penjual ketika ada perbedaan berat atau penjual telah memberikan diskon ongkir kepada pembeli.
+Ongkir yang ditalangi penyedia jasa logistik,Ongkir yang diteruskan ke penyedia jasa logistik dihitung berdasarkan berat/dimensi yang diukur oleh mereka.
+Ongkir penggantian (ditanggung pembeli),Ongkir yang ditanggung pembeli untuk pengantaran produk pengganti.
+Ongkir penukaran (ditanggung pembeli),Ongkir yang ditanggung pembeli untuk pengantaran produk yang ditukar.
+Ongkir yang ditanggung platform,Insentif ongkir yang disediakan oleh platform
+Ongkir yang ditanggung pembeli,Ongkir yang ditanggung pembeli dihitung berdasarkan berat produk yang Anda unggah.
+Pengembalian ongkir yang dibayar pembeli,Jumlah ongkir yang awalnya dibayar oleh pembeli dan telah dikembalikan.
+Ongkir pengembalian barang (yang ditanggung pembeli),Ongkir yang dibebankan kepada pembeli untuk pengembalian barang
+Subsidi ongkir,Jumlah positif menunjukkan subsidi ongkir yang telah Anda terima dan jumlah negatif menunjukkan subsidi ongkir yang mesti Anda kembalikan.
+Biaya pengiriman sesuai jarak dari Program Horison+,"Biaya sesuai jarak untuk pengiriman yang dibayar pembeli. Dengan pengaturan Program Horison+ Anda saat ini, biaya ini termasuk dalam harga produk untuk pesanan yang dikirim ke luar pulau Jawa."
+Biaya layanan logistik,Biaya logistik berdasarkan berat paket dan rute pengiriman. 
+Penggantian biaya asuransi,Pembayaran dari penyedia layanan asuransi untuk membayar ongkir
+Komisi Afiliasi,"Komisi afiliasi = (Harga produk sebelum pajak − Diskon penjual) × Persentase komisi. Jika pembeli menerima pengembalian dana setelah pembayaran pesanan diselesaikan, komisi afiliasi yang sudah dibayarkan tidak akan dikembalikan. "
+Komisi mitra afiliasi,(Harga produk (di luar pajak) − Diskon penjual) * Persentase komisi mitra afiliasi. Komisi mitra afiliasi tidak bisa dikembalikan jika ada pengembalian dana setelah penyelesaian pembayaran pesanan.
+Komisi Iklan Toko afiliasi,(Harga produk (di luar pajak) − Diskon penjual) * Persentase komisi iklan. Komisi Iklan Toko afiliasi tidak bisa dikembalikan jika ada pengembalian dana setelah penyelesaian pembayaran pesanan.
+Deposit komisi afiliasi,Jumlah yang dialokasikan untuk komisi kreator setelah pesanan dibayar. Hanya berlaku atas komisi berdasarkan volume pesanan dan persentase penghasilan tertinggi.
+Pengembalian dana komisi afiliasi,Deposit komisi yang dikembalikan kepada Anda setelah pesanan dibayar. Hanya berlaku atas komisi berdasarkan volume pesanan.
+Komisi iklan toko Mitra Afiliasi,"Biaya komisi iklan yang dibayarkan penjual kepada
+Mitra Afiliasi TikTok Shop (TAP)."
+Biaya layanan Program Bebas Ongkir,"Mengingat partisipasi Anda dalam program dan manfaatnya, kami mengenakan biaya layanan sesuai dengan "
+Komisi dinamis,Biaya komisi dinamis adalah biaya yang dibebankan platform kepada penjual untuk semua pesanan yang terkirim. 
+Biaya layanan Program Growth Xtra,Biaya layanan untuk penjual yang mengikuti Program Growth Xtra dan menerima keuntungan program. 
+Biaya layanan Khusus LIVE,Ada biaya layanan terkait jika Anda mengikuti program Khusus LIVE.
+Biaya layanan Growth Xtra Program Super,Biaya layanan tambahan akan dikenakan setelah upgrade ke Super Program Growth Xtra untuk menikmati keuntungan eksklusif.
+Biaya pemrosesan pesanan,"Biaya yang dikenakan pada tiap transaksi di platform untuk membiayai kegiatan operasional, seperti pemrosesan dan pemenuhan pesanan. "
+Biaya layanan Program EAMS,"Biaya layanan untuk mengikuti Program Solusi Marketing Afiliasi Eksternal, sebagaimana yang dijelaskan selama pendaftaran."
+Biaya layanan Brands Crazy Deal/Flash Sale,Biaya yang dikenakan kepada penjual yang mengikuti campaign Brands Crazy Deal/Flash Sale.
+Biaya Dilayani Tokopedia,Biaya Dilayani Tokopedia
+Biaya penanganan Dilayani Tokopedia,Biaya penanganan yang dikenakan ke penjual untuk pesanan Dilayani Tokopedia
+Biaya program PayLater,Biaya yang dikenakan kepada penjual untuk mengikuti program PayLater.
+Biaya sumber daya campaign,Total biaya sumber daya campaign dari program yang diikuti penjual.
+Biaya layanan penginstalan,Biaya yang dikenakan TikTok Shop untuk penggunaan layanan penginstalan platform.
+PPh Pasal 22 dipungut,PPh Pasal 22 dipungut oleh platform berdasarkan PMK 37/2025. 
+Biaya layanan khusus platform,"Sebagian dari Biaya Pengiriman Jarak Jauh yang dibayarkan oleh pembeli yang melebihi biaya yang dikenakan oleh penyedia layanan logistik, disimpan oleh TikTok Shop untuk mendukung pengalaman pemenuhan pesanan yang aman."
+Biaya iklan GMV Max,Penghitungan biaya iklan untuk tiap pesanan adalah: (Total pembayaran + Diskon platform untuk produk) ÷ ROI iklan × (1 + tarif pajak). 
+Voucher GMV Max,Biaya voucher GMV Max.
+Pajak penjualan atas voucher GMV Max,Pajak penjualan yang dikenakan pada biaya voucher GMV Max.
+Program layanan terkelola (Pajak penjualan),Nominal ini dipungut atas nama pemerintah.
+Program layanan terkelola (Biaya per pesanan),Dihitung sebagai persentase dari (harga asli - diskon penjual + ongkir yang dibayar pembeli).
+Ongkir pesanan gagal kirim,"Ongkir untuk pesanan yang gagal dikirimkan kepada pembeli. Namun, penjual dan platform mungkin menanggung bersama ongkir tersebut dalam kasus tertentu."
+Ongkir pengembalian barang karena kesalahan pembeli,"Ongkir untuk pengembalian barang karena kesalahan pembeli. Namun, penjual dan platform mungkin menanggung bersama ongkir tersebut dalam kasus tertentu."
+Biaya asuransi,Premi yang dikenakan per pesanan untuk pertanggungan
+Jumlah penyesuaian,Jumlah penyesuaian.
+ID pesanan terkait,"Pesanan yang terkait dengan penyesuaian, jika ada."
+Berbagai jenis penyesuaian,Penjelasan
+Penyesuaian ongkir,Penyesuaian Biaya Pengiriman: Penyesuaian karena perbedaan antara biaya pengiriman aktual dan biaya pengiriman prabayar
+Kompensasi Ongkir,Kompensasi bagi penjual karena ada selisih antara ongkir sebenarnya dan ongkir yang sudah dibayar
+Chargeback,Chargeback: Jumlah yang dikembalikan ke kartu pembayaran setelah pengajuan sengketa oleh pembeli atas suatu produk di rekening koran atau laporan transaksi mereka disetujui.
+Kompensasi kepada pembeli,Kompensasi kepada pembeli: Jumlah pengembalian dana setelah pesanan dibayarkan atau jumlah pengembalian dana tambahan yang dibayarkan kepada pembeli.
+Penyesuaian Promosi,Penyesuaian Promosi: Jumlah yang ditanggung penjual dalam kegiatan pemasaran
+Kompensasi Platform,Kompensasi yang diberikan kepada Penjual atas disetujuinya pengajuan selisih/sengketa
+Penalti Platform,Anda di denda karena toko Anda terindikasi melakukan pelanggaran terhadap ketentuan Platform. Untuk informasi lebih lanjut silakan cek notifikasi yang dikirimkan ke email Anda.
+Biaya pengiriman sampel,Biaya ini dikenakan untuk pengiriman sampel menggunakan penyedia jasa logistik platform.
+Penggantian Biaya Logistik,Pengembalian dana yang dibayarkan oleh TikTok Shop atas kerugian dikarenakan masalah logistik.
+Subsidi kepuasan,Subsidi dari TikTok Shop karena ketidakpuasan terhadap platform.
+Potongan dana ditanggung penjual,"Jika ketidaknyamanan pembeli terjadi karena kesalahan Anda, biaya kerugian yang dialami pembeli menjadi tanggung jawab Anda."
+Potongan biaya pengiriman,Potongan biaya pengiriman karena mengikuti aktivitas di platform
+Biaya layanan gudang,"Biaya tersebut dikenakan untuk penyediaan layanan gudang, seperti pengemasan, bahan kemasan, menempelkan barcode, menginspeksi produk baru, dsb."
+Penyesuaian komisi platform,Penyesuaian saat ada selisih pada komisi platform yang dibayarkan oleh penjual.
+Kompensasi komisi platform,Kompensasi bagi penjual jika ada selisih pada komisi platform yang dibayarkan oleh penjual
+Penyesuaian biaya transaksi,Selisih antara biaya transaksi yang wajib dibayar penjual dan nominal yang dibayar penjual.
+Restitusi pajak,Jumlah restitusi pajak setelah verifikasi dan penerimaan formulir 2307 dari penjual dalam bentuk salinan fisik dan digital.
+Biaya paket manfaat pemasaran,Biaya yang dikenakan saat penjual mengikuti campaign.
+Biaya paket keuntungan pemasaran tambahan,"Biaya tambahan yang dikenakan 21 hari setelah campaign berakhir, berdasarkan GMV yang didapat selama campaign."
+Pembayaran GMV untuk Promosi,Jumlah penyelesaian pembayaran digunakan untuk membayar Promosi
+Pembayaran GMV untuk Iklan TikTok,"Saat penjual mengaktifkan ""Bayar iklan dengan GMV"", penghasilan toko akan digunakan untuk membayar biaya iklan."
+Kompensasi biaya sumber daya campaign,Total kompensasi biaya sumber daya campaign dari program yang diikuti penjual.
+Kompensasi asuransi pengiriman,"Kompensasi yang dibayarkan untuk klaim Anda atas paket yang hilang atau rusak, mencakup harga produk atau ongkir pengembalian/penukaran barang."
+Penyesuaian Lainnya,Penyesuaian Lainnya: Penyesuaian karena kondisi lain
+Pengembalian PPh Pasal 22 yang dipotong,"Pengembalian PPh Pasal 22 yang dipotong platform pada 1–6 Agustus 2026. Karena penerapan PMK 37/2025 ditunda hingga 1 November 2026, seluruh PPh yang dipotong selama periode tersebut telah dikembalikan kepada Anda."
+Informasi pendukung tambahan,Penjelasan
+Pembayaran oleh pembeli,Total biaya yang dibayar oleh pembeli. Pembayaran oleh pembeli = Subtotal setelah diskon penjual - Diskon platform + Ongkir pembeli 
+Pengembalian dana pembeli,Nominal yang dikembalikan kepada pembeli.
+Diskon voucher yang ditanggung penjual,Porsi voucher diskon yang ditanggung bersama dari penjual selama mereka mengikuti campaign yang ditanggung bersama.
+Pengembalian dana diskon voucher yang ditanggung penjual,Jumlah diskon yang dananya dikembalikan kepada penjual sekaligus berasal dari porsi voucher yang ditanggung bersama dari penjual selama mereka mengikuti campaign yang ditanggung bersama.
+Diskon platform,"Jumlah diskon yang ditanggung platform (TikTok Shop). Ini termasuk:
+
+i) Diskon yang ditanggung platform melalui Subsidi Langsung Platform, Flash Deal Platform, Beli Banyak Lebih Hemat Platform, dan Voucher Platform.
+
+ii) Porsi voucher diskon yang ditanggung bersama dari platform selama campaign yang ditanggung bersama."
+Pengembalian dana diskon platform,"Jumlah diskon yang dikembalikan dananya kepada platform. Ini termasuk:
+
+i) Diskon yang ditanggung platform melalui Subsidi Langsung Platform, Flash Deal Platform, Beli Banyak Lebih Hemat Platform, dan Voucher Platform.
+
+ii) Porsi voucher diskon yang ditanggung bersama dari platform selama campaign yang ditanggung bersama."
+Diskon voucher yang ditanggung platform,Porsi voucher diskon yang ditanggung bersama dari platform selama campaign yang ditanggung bersama.
+Pengembalian dana diskon voucher yang ditanggung platform,Jumlah diskon yang dananya dikembalikan kepada platform sekaligus berasal dari porsi voucher yang ditanggung bersama dari platform selama campaign yang ditanggung bersama.
+Diskon ongkir dari penjual,Diskon ongkir yang disediakan penjual.
+Perkiraan berat paket,Berat produk yang diunggah oleh penjual.
+Berat paket yang bisa dikenai biaya,Berat yang ditimbang oleh penyedia logistik platform.
