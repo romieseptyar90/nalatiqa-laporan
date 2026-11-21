@@ -1166,7 +1166,7 @@ function renderDashboard() {
   document.getElementById('kpi-omset').textContent = formatRupiah(metrics.grossSales);
   const omsetSubEl = document.querySelector('.kpi-card.highlight-omset .kpi-subtext');
   if (omsetSubEl) {
-    omsetSubEl.textContent = `${metrics.txCount} pesanan • ${metrics.totalQtySold || metrics.txCount} pcs produk terjual`;
+    omsetSubEl.textContent = `${metrics.txCount} total transaksi pesanan`;
   }
   document.getElementById('kpi-deduction').textContent = formatRupiah(metrics.totalDeductions);
   document.getElementById('kpi-net-settlement').textContent = formatRupiah(metrics.netSettlement);
@@ -1639,7 +1639,7 @@ function renderTransactions() {
   updateBulkDeleteButtonState();
 
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text-muted);">Tidak ada transaksi yang cocok</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-muted);">Tidak ada transaksi yang cocok</td></tr>`;
     renderPaginationBar('transactions-pagination', 'transactions', { total: 0 }, 'renderTransactions');
     return;
   }
@@ -1672,14 +1672,8 @@ function renderTransactions() {
         <td>${getStoreBadgeHtml(t.storeId)}</td>
         <td>${channelBadge}</td>
         <td>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span class="badge" style="background:#e0f2fe;color:#0284c7;font-weight:700;font-size:11px;padding:2px 6px;border-radius:4px;flex-shrink:0;">${t.qty || 1}x</span>
-            <div style="font-weight:600;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${t.productName}">${t.productName || '-'}</div>
-          </div>
+          <div style="font-weight:600;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${t.productName}">${t.productName || '-'}</div>
           <div style="font-size:11px;color:var(--text-muted);">${t.buyerName ? 'Pembeli: ' + t.buyerName + ' &bull; ' : ''}${t.paymentMethod || 'COD / Saldo'}</div>
-        </td>
-        <td style="text-align:center;">
-          <span class="badge" style="background:#e0f2fe;color:#0284c7;font-weight:800;font-size:12px;padding:3px 8px;border-radius:6px;">${t.qty || 1} pcs</span>
         </td>
         <td style="font-weight:600;">${formatRupiah(t.grossSales)}</td>
         <td style="color:var(--danger);font-size:12px;">-${formatRupiah(totalDeductions)}</td>
@@ -3948,10 +3942,6 @@ function showImportPreviewScreen() {
   document.getElementById('import-preview-deduction').textContent = formatRupiah(m.totalDeductions);
   document.getElementById('import-preview-net').textContent = formatRupiah(m.totalNet);
 
-  const totalQty = stagedImportTransactions.reduce((acc, t) => acc + (t.status === 'cancelled' ? 0 : Number(t.qty || 1)), 0);
-  const elQty = document.getElementById('import-preview-qty');
-  if (elQty) elQty.textContent = `${totalQty} pcs`;
-
   // Render the Orders Preview Table
   renderImportOrdersPreviewTable();
 
@@ -3975,14 +3965,8 @@ function renderImportOrdersPreviewTable() {
           <div style="font-size:11px;color:var(--text-muted);">${formatDateIndo(t.date)} &bull; ${t.paymentMethod || '-'}</div>
         </td>
         <td>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span class="badge" style="background:#e0f2fe;color:#0284c7;font-weight:700;font-size:11px;padding:2px 6px;border-radius:4px;flex-shrink:0;">${t.qty || 1}x</span>
-            <div style="font-weight:600;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${t.productName}">${t.productName}</div>
-          </div>
+          <div style="font-weight:600;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${t.productName}">${t.productName}</div>
           <div style="font-size:11px;color:var(--text-muted);">${t.buyerName ? 'Pembeli: ' + t.buyerName + ' &bull; ' : ''}SKU: <code>${t.sku || '-'}</code></div>
-        </td>
-        <td style="text-align:center;">
-          <span class="badge" style="background:#e0f2fe;color:#0284c7;font-weight:800;font-size:12px;padding:3px 8px;border-radius:6px;">${t.qty || 1} pcs</span>
         </td>
         <td style="font-weight:600;">${formatRupiah(t.grossSales)}</td>
         <td style="color:var(--danger);font-size:12px;">-${formatRupiah(t.adminFee + t.serviceFee + t.transactionFee + t.voucherFee)}</td>

@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>PT NALATIQA GROUP - Pembukuan 5 Akun Toko & 15 Marketplace</title>
-  <link rel="stylesheet" href="styles.css?v=20261121_09">
+  <link rel="stylesheet" href="styles.css?v=20261121_10">
   <script>
     // Bulletproof Early Toast Notification Helper
     window.showToast = function(message, type) {
@@ -652,7 +652,6 @@
                     <th>Akun Toko</th>
                     <th>Channel</th>
                     <th>Produk / SKU</th>
-                    <th style="text-align: center; width: 75px;">Qty</th>
                     <th>Penjualan Kotor</th>
                     <th>Total Potongan</th>
                     <th>Pencairan Bersih</th>
@@ -892,10 +891,6 @@
                 <div class="preview-stat-value" id="import-preview-count" style="color: var(--primary);">0</div>
               </div>
               <div class="preview-stat">
-                <div class="preview-stat-label">Total Qty Produk</div>
-                <div class="preview-stat-value" id="import-preview-qty" style="color: #0284c7;">0 pcs</div>
-              </div>
-              <div class="preview-stat">
                 <div class="preview-stat-label">Duplikat Dilewati</div>
                 <div class="preview-stat-value" id="import-preview-skipped" style="color: var(--text-muted);">0</div>
               </div>
@@ -924,7 +919,6 @@
                     <tr>
                       <th>No. Pesanan / Tanggal</th>
                       <th>Nama Barang / SKU</th>
-                      <th style="text-align: center; width: 75px;">Qty</th>
                       <th>Harga Kotor</th>
                       <th>Potongan Biaya</th>
                       <th>Pencairan Bersih</th>
@@ -1711,10 +1705,7 @@
               <!-- Options populated by JS -->
             </select>
           </div>
-          <div class="form-group">
-            <label class="form-label">Kuantitas / Jumlah (Qty) <span style="color:var(--danger)">*</span></label>
-            <input type="number" id="tx-modal-qty" class="form-control" min="1" value="1" placeholder="1" oninput="calculateModalDeductions()">
-          </div>
+          <input type="hidden" id="tx-modal-qty" value="1">
           <div class="form-group">
             <label class="form-label">Nama Pembeli (Opsional)</label>
             <input type="text" id="tx-modal-buyer" class="form-control" placeholder="Nama pembeli">
@@ -1821,10 +1812,7 @@
             <label class="form-label">Modal Pokok / HPP (Rp)</label>
             <input type="number" id="product-modal-hpp" class="form-control" placeholder="60000">
           </div>
-          <div class="form-group">
-            <label class="form-label">Stok Tersedia</label>
-            <input type="number" id="product-modal-stock" class="form-control" value="50">
-          </div>
+          <input type="hidden" id="product-modal-stock" value="0">
         </div>
       </div>
       <div class="modal-footer">
@@ -2220,6 +2208,6 @@
   <!-- SheetJS Library for 100% reliable Excel (.xlsx & .xls) reading -->
   <script src="xlsx.full.min.js?v=20261119_01"></script>
   <!-- Core App Logic -->
-  <script src="app.js?v=20261121_09"></script>
+  <script src="app.js?v=20261121_10"></script>
 </body>
 </html>
