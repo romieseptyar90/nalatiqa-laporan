@@ -1198,6 +1198,17 @@ function renderDashboard() {
   const elDashDetails = document.getElementById('dash-capital-details');
   const elDashCash = document.getElementById('dash-cash-balance');
 
+  // Compute 25% Reinvest Total from active profit sharing allocation
+  const isSettlement = profitSharingBasis === 'settlement';
+  const rawBase = isSettlement ? Number(metrics.netSettlement || 0) : Number(metrics.netProfit || 0);
+  const baseAmount = Math.max(0, Math.round(rawBase));
+  const quarterAmount = Math.round(baseAmount / 4);
+  const withdrawnTotal = quarterAmount * 3;
+  const autoReinvest25 = Math.max(0, baseAmount - withdrawnTotal);
+  const displayProfitReinvest = (metrics.totalProfitReinvest && metrics.totalProfitReinvest > 0)
+    ? metrics.totalProfitReinvest
+    : autoReinvest25;
+
   if (currentStoreFilter === 'all') {
     if (elDashCashTitle) elDashCashTitle.textContent = '🏢 POSISI KAS & PERMODALAN KONSOLIDASI PERUSAHAAN (HOLDING)';
     if (elDashCashSublabel) elDashCashSublabel.textContent = 'Total Kas Konsolidasi Perusahaan (Modal Kas Masuk + Saldo Cair 5 Toko)';
@@ -1206,7 +1217,7 @@ function renderDashboard() {
       elDashDetails.innerHTML = `
         <div>Modal Kas Perusahaan: <strong id="dash-capital-in" style="color: #047857;">${formatRupiah(metrics.totalCapitalIn)}</strong></div>
         <div>Sisa Hutang: <strong id="dash-capital-debt" style="color: #b91c1c;">${formatRupiah(metrics.remainingDebt)}</strong></div>
-        <div>Laba Diputar: <strong id="dash-capital-profit" style="color: #059669;">${formatRupiah(metrics.totalProfitReinvest)}</strong></div>
+        <div>Laba Diputar (25%): <strong id="dash-capital-profit" style="color: #059669;">${formatRupiah(displayProfitReinvest)}</strong></div>
         <button class="btn btn-sm btn-outline-primary" onclick="switchTab('capital')" style="padding: 4px 12px; font-weight: 600; background: #ffffff;">
           Buku Kas & Modal &rarr;
         </button>
@@ -1223,6 +1234,7 @@ function renderDashboard() {
           <span>🏢 Modal Kas Rp 29.000.000 Terpusat di Kas Perusahaan (Bukan Modal Toko Cabang)</span>
         </div>
         <div>Pencairan Penjualan: <strong style="color: #047857;">${formatRupiah(metrics.netSettlement)}</strong></div>
+        <div>Laba Diputar (25%): <strong style="color: #059669;">${formatRupiah(displayProfitReinvest)}</strong></div>
         <button class="btn btn-sm btn-outline-primary" onclick="setStoreFilter('all')" style="padding: 4px 12px; font-weight: 600; background: #ffffff;">
           Lihat Kas Perusahaan &rarr;
         </button>
@@ -6232,8 +6244,19 @@ function renderCapitalView() {
     elDebtRem.style.color = metrics.remainingDebt > 0 ? '#b91c1c' : '#059669';
   }
 
+  // Compute 25% Reinvest Total from active profit sharing allocation
+  const isSettlement = profitSharingBasis === 'settlement';
+  const rawBase = isSettlement ? Number(metrics.netSettlement || 0) : Number(metrics.netProfit || 0);
+  const baseAmount = Math.max(0, Math.round(rawBase));
+  const quarterAmount = Math.round(baseAmount / 4);
+  const withdrawnTotal = quarterAmount * 3;
+  const autoReinvest25 = Math.max(0, baseAmount - withdrawnTotal);
+  const displayCapitalProfit = (metrics.totalProfitReinvest && metrics.totalProfitReinvest > 0)
+    ? metrics.totalProfitReinvest
+    : autoReinvest25;
+
   const elProfit = document.getElementById('capital-profit-display');
-  if (elProfit) elProfit.textContent = formatRupiah(metrics.totalProfitReinvest);
+  if (elProfit) elProfit.textContent = formatRupiah(displayCapitalProfit);
 
   const elOwner = document.getElementById('capital-owner-display');
   if (elOwner) elOwner.textContent = formatRupiah(metrics.totalOwnerCapital + metrics.totalInvestorCapital);
