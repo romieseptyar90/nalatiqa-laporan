@@ -640,29 +640,34 @@ function getFilteredRecords(records, dateField = 'date') {
 
     // 3. Date Filter
     const itemDateStr = item[dateField];
-    if (!itemDateStr) return true;
+    if (!itemDateStr && !item.startDate) return true;
 
-    let itemDate = String(itemDateStr).trim().replace(/\//g, '-');
-    if (itemDate.includes('T')) itemDate = itemDate.split('T')[0];
+    let itemStart = String(item.startDate || itemDateStr).trim().replace(/\//g, '-');
+    if (itemStart.includes('T')) itemStart = itemStart.split('T')[0];
+    let itemEnd = String(item.endDate || item.startDate || itemDateStr).trim().replace(/\//g, '-');
+    if (itemEnd.includes('T')) itemEnd = itemEnd.split('T')[0];
 
     if (dateFilter === 'today') {
-      return itemDate === todayStr;
+      return itemStart <= todayStr && itemEnd >= todayStr;
     } else if (dateFilter === '7days') {
       const d7 = new Date();
-      d7.setDate(d7.getDate() - 7);
-      return new Date(itemDate) >= d7;
+      d7.setDate(d7.getDate() - 6);
+      const d7Str = d7.toISOString().split('T')[0];
+      return itemStart <= todayStr && itemEnd >= d7Str;
     } else if (dateFilter === 'month') {
-      const d = new Date(itemDate);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      const mStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      return itemStart <= mEnd && itemEnd >= mStart;
     } else if (dateFilter === 'lastmonth') {
-      const d = new Date(itemDate);
-      const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
-      const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-      return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
+      const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+      const lmStart = new Date(prevYear, prevMonth, 1).toISOString().split('T')[0];
+      const lmEnd = new Date(prevYear, prevMonth + 1, 0).toISOString().split('T')[0];
+      return itemStart <= lmEnd && itemEnd >= lmStart;
     } else if (dateFilter === 'custom') {
-      if (customStartDate && itemDate < customStartDate) return false;
-      if (customEndDate && itemDate > customEndDate) return false;
-      return true;
+      const cStart = customStartDate || '0000-00-00';
+      const cEnd = customEndDate || '9999-99-99';
+      return itemStart <= cEnd && itemEnd >= cStart;
     }
     return true;
   });
@@ -1172,6 +1177,16 @@ function renderDashboard() {
   document.getElementById('kpi-net-settlement').textContent = formatRupiah(metrics.netSettlement);
   document.getElementById('kpi-hpp').textContent = formatRupiah(metrics.hppTotal);
   document.getElementById('kpi-ads').textContent = formatRupiah(metrics.allAdsTotal);
+  const kpiAdsSub = document.getElementById('kpi-ads-subtext');
+  if (kpiAdsSub) {
+    if (metrics.allAdsTotal > 0 && metrics.grossSales > 0) {
+      const dashRoas = (metrics.grossSales / metrics.allAdsTotal).toFixed(2);
+      const dashAcos = ((metrics.allAdsTotal / metrics.grossSales) * 100).toFixed(1);
+      kpiAdsSub.innerHTML = `<strong style="color:var(--success);">${dashRoas}x ROAS</strong> &bull; ACOS ${dashAcos}%`;
+    } else {
+      kpiAdsSub.textContent = 'Shopee, TikTok & Meta Ads';
+    }
+  }
   document.getElementById('kpi-opex').textContent = formatRupiah(metrics.totalOpex);
   
   const elProfit = document.getElementById('kpi-profit');
@@ -4680,30 +4695,98 @@ function renderProducts() {
   }).join('');
 }
 
+// Helper to calculate Omset & ROAS automatically from Dashboard transactions
+function getAdMetricsFromDashboard(ad, allTxs) {
+  const storeId = ad.storeId;
+  const channel = ad.channel;
+  const sDate = (ad.startDate || ad.date || '').replace(/\//g, '-').split('T')[0];
+  const eDate = (ad.endDate || ad.startDate || ad.date || '').replace(/\//g, '-').split('T')[0];
+
+  let salesGross = 0;
+  let orderCount = 0;
+
+  (allTxs || []).forEach(t => {
+    if (t.status === 'cancelled') return;
+
+    if (storeId && storeId !== 'all' && storeId !== 'company') {
+      const tStore = t.storeId || (t.storeAccount ? t.storeAccount.toLowerCase() : 'health');
+      if (tStore !== storeId) return;
+    }
+
+    if (channel && channel !== 'all') {
+      if (t.channel !== channel) return;
+    }
+
+    const tDate = String(t.date || '').replace(/\//g, '-').split('T')[0];
+    if (sDate && tDate < sDate) return;
+    if (eDate && tDate > eDate) return;
+
+    salesGross += Number(t.grossSales || 0);
+    orderCount++;
+  });
+
+  // Fallback for legacy demo items with no matching imported transactions
+  if (salesGross === 0 && Number(ad.salesGross || 0) > 0 && orderCount === 0) {
+    salesGross = Number(ad.salesGross);
+  }
+
+  const spend = Number(ad.spend || 0);
+  const roas = (spend > 0 && salesGross > 0) ? (salesGross / spend).toFixed(2) : (spend > 0 ? '0.00' : '-');
+  const acos = salesGross > 0 ? ((spend / salesGross) * 100).toFixed(1) : '-';
+
+  return { salesGross, orderCount, roas, acos };
+}
+
 // Ads View
 function renderAds() {
   const tbody = document.getElementById('ads-tbody');
   if (!tbody) return;
 
   const store = db.getStore();
+  if (!store.ads) store.ads = [];
+
   const list = getFilteredRecords(store.ads);
-  list.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  let totalSpend = 0;
-  let totalSales = 0;
-
-  list.forEach(a => {
-    totalSpend += Number(a.spend || 0);
-    totalSales += Number(a.salesGross || 0);
+  list.sort((a, b) => {
+    const dateB = new Date(b.endDate || b.startDate || b.date || 0);
+    const dateA = new Date(a.endDate || a.startDate || a.date || 0);
+    return dateB - dateA;
   });
 
-  const overallRoas = totalSpend > 0 ? (totalSales / totalSpend).toFixed(2) : '0';
-  document.getElementById('ads-total-spend').textContent = formatRupiah(totalSpend);
-  document.getElementById('ads-total-sales').textContent = formatRupiah(totalSales);
-  document.getElementById('ads-roas').textContent = `${overallRoas}x ROAS`;
+  // 1. Total Ad Spend from matching ads in active filter
+  let totalSpend = 0;
+  list.forEach(a => {
+    totalSpend += Number(a.spend || 0);
+  });
+
+  // 2. Total Gross Sales from Dashboard transactions matching active filter
+  const txs = getFilteredRecords(store.transactions || []);
+  let totalGrossSales = 0;
+  txs.forEach(t => {
+    if (t.status === 'cancelled') return;
+    totalGrossSales += Number(t.grossSales || 0);
+  });
+
+  const overallRoas = (totalSpend > 0 && totalGrossSales > 0) ? (totalGrossSales / totalSpend).toFixed(2) : '0';
+  const overallAcos = (totalGrossSales > 0 && totalSpend > 0) ? ((totalSpend / totalGrossSales) * 100).toFixed(1) : '0';
+
+  const spendEl = document.getElementById('ads-total-spend');
+  if (spendEl) spendEl.textContent = formatRupiah(totalSpend);
+
+  const salesEl = document.getElementById('ads-total-sales');
+  if (salesEl) salesEl.textContent = formatRupiah(totalGrossSales);
+
+  const roasEl = document.getElementById('ads-roas');
+  if (roasEl) roasEl.textContent = `${overallRoas}x ROAS`;
+
+  const subtextEl = document.getElementById('ads-roas-subtext');
+  if (subtextEl) {
+    subtextEl.textContent = totalGrossSales > 0 
+      ? `ACOS: ${overallAcos}% (Beban iklan thdp omset)` 
+      : 'Omset Kotor ÷ Biaya Iklan';
+  }
 
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted);">Belum ada catatan iklan</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:36px;color:var(--text-muted);">Belum ada catatan biaya iklan untuk filter ini. Klik tombol <strong>+ Catat Biaya Iklan</strong> untuk menambahkan pengeluaran iklan Anda.</td></tr>`;
     renderPaginationBar('ads-pagination', 'ads', { total: 0 }, 'renderAds');
     return;
   }
@@ -4718,19 +4801,59 @@ function renderAds() {
         ? `<span class="badge badge-lazada">Lazada Sponsored</span>`
         : `<span class="badge badge-tiktok">TikTok Ads</span>`);
 
-    const roas = (a.spend > 0 && a.salesGross > 0) ? (a.salesGross / a.spend).toFixed(2) : '-';
+    const sDate = a.startDate || a.date;
+    const eDate = a.endDate || a.startDate || a.date;
+    let dateDisplay = '';
+    if (sDate === eDate) {
+      dateDisplay = `<div><strong>${formatDateIndo(sDate)}</strong></div><span class="badge badge-secondary" style="font-size:10px; margin-top:2px;">Harian</span>`;
+    } else {
+      const diffDays = Math.max(1, Math.round((new Date(eDate) - new Date(sDate)) / (1000 * 60 * 60 * 24)) + 1);
+      dateDisplay = `
+        <div style="font-weight:600; font-size:12.5px; color:#1e293b;">${formatDateIndo(sDate)} &ndash; ${formatDateIndo(eDate)}</div>
+        <span class="badge badge-info" style="font-size:10px; background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; margin-top:2px;">Periode ${diffDays} Hari</span>
+      `;
+    }
+
+    const adMetrics = getAdMetricsFromDashboard(a, store.transactions || []);
+    
+    let roasHtml = '';
+    if (adMetrics.salesGross > 0 && a.spend > 0) {
+      const roasVal = Number(adMetrics.roas);
+      const badgeBg = roasVal >= 4 ? '#10b981' : (roasVal >= 2 ? '#3b82f6' : '#f59e0b');
+      roasHtml = `
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <span class="badge" style="background:${badgeBg}; color:white; font-size:12px; font-weight:700;">${adMetrics.roas}x ROAS</span>
+          <span style="font-size:11px; color:#64748b; font-weight:600;">ACOS: ${adMetrics.acos}%</span>
+        </div>
+      `;
+    } else if (a.spend > 0) {
+      roasHtml = `<span class="badge badge-secondary" style="font-size:11px; color:#64748b;">- (0.00x)</span>`;
+    } else {
+      roasHtml = `<span style="color:var(--text-muted);">-</span>`;
+    }
+
+    const notesHtml = a.notes 
+      ? `<div style="font-size:12px; color:var(--text-secondary); max-width:200px; word-break:break-word;">${escapeHtml(a.notes)}</div>` 
+      : '<span style="color:var(--text-muted);">-</span>';
 
     return `
       <tr>
-        <td>${formatDateIndo(a.date)}</td>
+        <td>${dateDisplay}</td>
         <td>${getStoreBadgeHtml(a.storeId)}</td>
         <td>${channelBadge}</td>
-        <td><strong>${a.campaignType || 'Iklan'}</strong></td>
-        <td style="font-weight:700;color:var(--danger);">${formatRupiah(a.spend)}</td>
-        <td style="font-weight:700;color:var(--success);">${formatRupiah(a.salesGross)}</td>
-        <td><span class="badge badge-success" style="font-size:12px;">${roas}x</span></td>
+        <td><strong>${escapeHtml(a.campaignType || 'Iklan')}</strong></td>
+        <td style="font-weight:700; color:var(--danger); font-size:13.5px;">${formatRupiah(a.spend)}</td>
         <td>
-          <button class="btn btn-danger btn-sm" onclick="deleteAds('${a.id}')">Hapus</button>
+          <div style="font-weight:700; color:var(--success); font-size:13.5px;">${formatRupiah(adMetrics.salesGross)}</div>
+          <div style="font-size:11px; color:var(--text-muted);">${adMetrics.orderCount > 0 ? `${adMetrics.orderCount} pesanan terdata` : 'Belum ada pesanan'}</div>
+        </td>
+        <td>${roasHtml}</td>
+        <td>${notesHtml}</td>
+        <td>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button class="btn btn-secondary btn-sm" onclick="editAds('${a.id}')" title="Edit Data Iklan" style="padding:4px 8px; font-size:11px;">✏️ Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteAds('${a.id}')" title="Hapus Catatan Iklan" style="padding:4px 8px; font-size:11px;">🗑️</button>
+          </div>
         </td>
       </tr>
     `;
@@ -5639,49 +5762,228 @@ function deleteProduct(id) {
 
 // Ads Modal Actions
 function openAddAdsModal() {
+  const titleEl = document.getElementById('ads-modal-header-title');
+  if (titleEl) titleEl.textContent = 'Catat Biaya Iklan Marketplace';
+
+  const idEl = document.getElementById('ads-modal-id');
+  if (idEl) idEl.value = '';
+
   const storeSelect = document.getElementById('ads-modal-store');
   if (storeSelect) {
     storeSelect.value = (currentStoreFilter && currentStoreFilter !== 'all') ? currentStoreFilter : 'health';
   }
-  document.getElementById('ads-modal-date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('ads-modal-channel').value = 'shopee';
-  document.getElementById('ads-modal-type').value = 'Iklan Pencarian (Search Ads)';
-  document.getElementById('ads-modal-spend').value = '';
-  document.getElementById('ads-modal-sales').value = '';
-  document.getElementById('ads-modal-notes').value = '';
+
+  const channelSelect = document.getElementById('ads-modal-channel');
+  if (channelSelect) {
+    channelSelect.value = (channelFilter && channelFilter !== 'all') ? channelFilter : 'shopee';
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const sDateEl = document.getElementById('ads-modal-start-date');
+  if (sDateEl) sDateEl.value = todayStr;
+  const eDateEl = document.getElementById('ads-modal-end-date');
+  if (eDateEl) eDateEl.value = todayStr;
+
+  const typeEl = document.getElementById('ads-modal-type');
+  if (typeEl) typeEl.value = 'Iklan Pencarian & GMV Max';
+  const spendEl = document.getElementById('ads-modal-spend');
+  if (spendEl) spendEl.value = '';
+  const notesEl = document.getElementById('ads-modal-notes');
+  if (notesEl) notesEl.value = '';
+
+  updateAdModalPreview();
   openModal('modal-ads');
+}
+
+function editAds(id) {
+  const store = db.getStore();
+  const ad = (store.ads || []).find(a => a.id === id);
+  if (!ad) return;
+
+  const titleEl = document.getElementById('ads-modal-header-title');
+  if (titleEl) titleEl.textContent = 'Edit Catatan Biaya Iklan';
+
+  const idEl = document.getElementById('ads-modal-id');
+  if (idEl) idEl.value = ad.id;
+
+  const storeSelect = document.getElementById('ads-modal-store');
+  if (storeSelect) storeSelect.value = ad.storeId || 'health';
+
+  const channelSelect = document.getElementById('ads-modal-channel');
+  if (channelSelect) channelSelect.value = ad.channel || 'shopee';
+
+  const sDate = ad.startDate || ad.date || new Date().toISOString().split('T')[0];
+  const eDate = ad.endDate || ad.startDate || ad.date || new Date().toISOString().split('T')[0];
+  const sDateEl = document.getElementById('ads-modal-start-date');
+  if (sDateEl) sDateEl.value = sDate;
+  const eDateEl = document.getElementById('ads-modal-end-date');
+  if (eDateEl) eDateEl.value = eDate;
+
+  const typeEl = document.getElementById('ads-modal-type');
+  if (typeEl) typeEl.value = ad.campaignType || '';
+  const spendEl = document.getElementById('ads-modal-spend');
+  if (spendEl) spendEl.value = ad.spend || '';
+  const notesEl = document.getElementById('ads-modal-notes');
+  if (notesEl) notesEl.value = ad.notes || '';
+
+  updateAdModalPreview();
+  openModal('modal-ads');
+}
+
+function setAdModalDatePreset(preset) {
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  let sDate = todayStr;
+  let eDate = todayStr;
+
+  if (preset === 'today') {
+    sDate = todayStr;
+    eDate = todayStr;
+  } else if (preset === '7days') {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    sDate = d.toISOString().split('T')[0];
+    eDate = todayStr;
+  } else if (preset === 'month') {
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    sDate = `${y}-${m}-01`;
+    eDate = todayStr;
+  } else if (preset === 'lastmonth') {
+    const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const y = prevMonthDate.getFullYear();
+    const m = String(prevMonthDate.getMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+    sDate = `${y}-${m}-01`;
+    eDate = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
+  }
+
+  const sDateEl = document.getElementById('ads-modal-start-date');
+  if (sDateEl) sDateEl.value = sDate;
+  const eDateEl = document.getElementById('ads-modal-end-date');
+  if (eDateEl) eDateEl.value = eDate;
+  updateAdModalPreview();
+}
+
+function updateAdModalPreview() {
+  const store = db.getStore();
+  const storeId = document.getElementById('ads-modal-store')?.value || 'health';
+  const channel = document.getElementById('ads-modal-channel')?.value || 'shopee';
+  const sDate = document.getElementById('ads-modal-start-date')?.value || '';
+  const eDate = document.getElementById('ads-modal-end-date')?.value || sDate;
+  const spend = parseFloat(document.getElementById('ads-modal-spend')?.value) || 0;
+
+  const salesEl = document.getElementById('ads-modal-preview-sales');
+  const salesDescEl = document.getElementById('ads-modal-preview-sales-desc');
+  const roasEl = document.getElementById('ads-modal-preview-roas');
+  const acosEl = document.getElementById('ads-modal-preview-acos');
+
+  if (!salesEl) return;
+
+  const allTxs = store.transactions || [];
+  let salesGross = 0;
+  let orderCount = 0;
+
+  allTxs.forEach(t => {
+    if (t.status === 'cancelled') return;
+    if (storeId && storeId !== 'all' && storeId !== 'company') {
+      const tStore = t.storeId || (t.storeAccount ? t.storeAccount.toLowerCase() : 'health');
+      if (tStore !== storeId) return;
+    }
+    if (channel && channel !== 'all') {
+      if (t.channel !== channel) return;
+    }
+    const tDate = String(t.date || '').replace(/\//g, '-').split('T')[0];
+    if (sDate && tDate < sDate) return;
+    if (eDate && tDate > eDate) return;
+
+    salesGross += Number(t.grossSales || 0);
+    orderCount++;
+  });
+
+  salesEl.textContent = formatRupiah(salesGross);
+  if (orderCount > 0) {
+    salesDescEl.textContent = `Dihitung otomatis dari ${orderCount} transaksi pesanan di periode ini`;
+  } else {
+    salesDescEl.textContent = `Belum ada data transaksi di periode tanggal ini`;
+  }
+
+  if (spend > 0) {
+    if (salesGross > 0) {
+      const roasVal = (salesGross / spend).toFixed(2);
+      const acosVal = ((spend / salesGross) * 100).toFixed(1);
+      roasEl.innerHTML = `<span style="color:#16a34a; font-size:18px; font-weight:800;">${roasVal}x ROAS</span>`;
+      acosEl.innerHTML = `<span style="color:#0f766e; font-weight:600;">Rasio Beban Iklan (ACOS): ${acosVal}%</span>`;
+    } else {
+      roasEl.innerHTML = `<span style="color:#d97706; font-size:15px; font-weight:700;">0.00x ROAS</span>`;
+      acosEl.innerHTML = `<span style="color:#b45309;">(Belum ada omset penjualan terdeteksi)</span>`;
+    }
+  } else {
+    roasEl.textContent = '-';
+    acosEl.textContent = 'Ketik nominal biaya iklan di atas';
+  }
 }
 
 function saveAdsFromModal() {
   const store = db.getStore();
+  if (!store.ads) store.ads = [];
+
+  const id = document.getElementById('ads-modal-id')?.value;
   const storeId = document.getElementById('ads-modal-store')?.value || (currentStoreFilter !== 'all' ? currentStoreFilter : 'health');
   const storeMeta = getStoreMeta(storeId);
-  const storeAccount = storeMeta ? storeMeta.name : 'Nalatiqa Health';
-  const date = document.getElementById('ads-modal-date').value;
-  const channel = document.getElementById('ads-modal-channel').value;
-  const campaignType = document.getElementById('ads-modal-type').value;
-  const spend = parseFloat(document.getElementById('ads-modal-spend').value) || 0;
-  const salesGross = parseFloat(document.getElementById('ads-modal-sales').value) || 0;
-  const notes = document.getElementById('ads-modal-notes').value;
+  const storeAccount = storeMeta ? storeMeta.name : (storeId === 'company' ? 'Konsolidasi / Semua Toko' : 'Nalatiqa Health');
+  const channel = document.getElementById('ads-modal-channel')?.value || 'shopee';
+  const startDate = document.getElementById('ads-modal-start-date')?.value;
+  const endDate = document.getElementById('ads-modal-end-date')?.value || startDate;
+  const campaignType = document.getElementById('ads-modal-type')?.value.trim() || 'Iklan';
+  const spend = parseFloat(document.getElementById('ads-modal-spend')?.value) || 0;
+  const notes = document.getElementById('ads-modal-notes')?.value.trim();
 
+  if (!startDate) {
+    alert('Harap tentukan tanggal mulai periode iklan!');
+    return;
+  }
+  if (endDate < startDate) {
+    alert('Tanggal selesai tidak boleh lebih awal dari tanggal mulai!');
+    return;
+  }
   if (spend <= 0) {
     alert('Harap isi nominal biaya iklan yang terpakai!');
     return;
   }
 
-  const newAd = {
-    id: `ADS-${Date.now()}`,
-    storeId,
-    storeAccount,
-    date,
-    channel,
-    campaignType,
-    spend,
-    salesGross,
-    notes
-  };
+  if (id) {
+    const idx = store.ads.findIndex(a => a.id === id);
+    if (idx !== -1) {
+      store.ads[idx] = {
+        ...store.ads[idx],
+        storeId,
+        storeAccount,
+        channel,
+        startDate,
+        endDate,
+        date: startDate,
+        campaignType,
+        spend,
+        notes
+      };
+    }
+  } else {
+    const newAd = {
+      id: `ADS-${Date.now()}`,
+      storeId,
+      storeAccount,
+      channel,
+      startDate,
+      endDate,
+      date: startDate,
+      campaignType,
+      spend,
+      notes
+    };
+    store.ads.unshift(newAd);
+  }
 
-  store.ads.unshift(newAd);
   db.saveData(store);
   closeModal('modal-ads');
   renderCurrentView();

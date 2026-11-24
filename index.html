@@ -388,7 +388,7 @@
                 </div>
               </div>
               <div class="kpi-value" id="kpi-ads">Rp 0</div>
-              <div class="kpi-subtext">Shopee, TikTok & Meta Ads</div>
+              <div class="kpi-subtext" id="kpi-ads-subtext">Shopee, TikTok & Meta Ads</div>
             </div>
 
             <div class="kpi-card highlight-opex">
@@ -1062,25 +1062,35 @@
             <div class="kpi-card highlight-ads">
               <div class="kpi-header"><span class="kpi-label">Total Biaya Iklan</span></div>
               <div class="kpi-value" id="ads-total-spend" style="color: var(--danger);">Rp 0</div>
-              <div class="kpi-subtext">Pengeluaran Shopee & TikTok Ads</div>
+              <div class="kpi-subtext">Shopee Ads, TikTok Ads & Lazada</div>
             </div>
             <div class="kpi-card highlight-omset">
-              <div class="kpi-header"><span class="kpi-label">Omset Dari Iklan</span></div>
+              <div class="kpi-header"><span class="kpi-label">Omset Toko (Dashboard)</span></div>
               <div class="kpi-value" id="ads-total-sales" style="color: var(--primary);">Rp 0</div>
-              <div class="kpi-subtext">GMV yang dihasilkan iklan</div>
+              <div class="kpi-subtext">Omset kotor transaksi riil dashboard</div>
             </div>
             <div class="kpi-card highlight-profit">
-              <div class="kpi-header"><span class="kpi-label">Efektivitas Iklan (ROAS)</span></div>
+              <div class="kpi-header"><span class="kpi-label">Efektivitas Iklan (ROAS Otomatis)</span></div>
               <div class="kpi-value" id="ads-roas" style="color: var(--success);">0x ROAS</div>
-              <div class="kpi-subtext">Return on Ad Spend</div>
+              <div class="kpi-subtext" id="ads-roas-subtext">Omset Kotor &divide; Biaya Iklan (ACOS)</div>
+            </div>
+          </div>
+
+          <!-- Quick Tip Banner -->
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-md); padding: 12px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 20px;">🎯</span>
+              <span style="font-size: 13px; color: #166534;">
+                <strong>ROAS Otomatis Terhubung ke Dashboard:</strong> Anda cukup mencatat biaya iklan dan menentukan periode tanggalnya (bisa harian atau rentang custom date). Nilai Omset Toko dan rasio efektivitas ROAS akan dihitung otomatis dari data penjualan dashboard tanpa perlu input manual.
+              </span>
             </div>
           </div>
 
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">Riwayat Pengeluaran Iklan Harian</div>
-                <div class="card-subtitle">Shopee Ads (TopAds) & TikTok Ads (GMV Max / Live Shopping)</div>
+                <div class="card-title">Riwayat Pengeluaran Iklan Marketplace</div>
+                <div class="card-subtitle">Shopee Ads, TikTok Ads (GMV Max), & Lazada Sponsored Solutions dengan ROAS otomatis</div>
               </div>
               <button class="btn btn-primary" onclick="openAddAdsModal()">+ Catat Biaya Iklan</button>
             </div>
@@ -1089,13 +1099,14 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Tanggal</th>
+                    <th>Periode Iklan</th>
                     <th>Akun Toko</th>
                     <th>Platform</th>
                     <th>Jenis Campaign</th>
-                    <th>Biaya Terpakai</th>
-                    <th>Omset Iklan</th>
-                    <th>ROAS</th>
+                    <th>Biaya Iklan</th>
+                    <th>Omset Toko (Dashboard)</th>
+                    <th>ROAS Otomatis</th>
+                    <th>Catatan</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
@@ -1823,56 +1834,108 @@
   </div>
 
   <!-- ==========================================
-       MODAL 3: IKLAN
+       MODAL 3: IKLAN MARKETPLACE
        ========================================== -->
   <div id="modal-ads" class="modal-backdrop">
-    <div class="modal-content">
+    <div class="modal-content modal-md">
       <div class="modal-header">
-        <div class="modal-title">Catat Pengeluaran Iklan Harian</div>
+        <div>
+          <div class="modal-title" id="ads-modal-header-title">Catat Biaya Iklan Marketplace</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Input biaya iklan dengan periode fleksibel (harian / custom date). Omset & ROAS dihitung otomatis.</div>
+        </div>
         <button class="modal-close" onclick="closeModal('modal-ads')">&times;</button>
       </div>
       <div class="modal-body">
+        <input type="hidden" id="ads-modal-id">
+
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Akun Toko</label>
-            <select id="ads-modal-store" class="form-control">
+            <label class="form-label">Akun Toko Terkait <span style="color:var(--danger)">*</span></label>
+            <select id="ads-modal-store" class="form-control" onchange="updateAdModalPreview()">
               <option value="nature">🌿 Nalatiqa Nature</option>
               <option value="health" selected>💊 Nalatiqa Health</option>
               <option value="storeline">🏬 Nalatiqa Storeline</option>
               <option value="nn">⭐ NN Nalatiqa</option>
               <option value="bud">🌱 Nalatiqa Bud</option>
+              <option value="company">🏢 Konsolidasi / Semua Toko</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Tanggal</label>
-            <input type="date" id="ads-modal-date" class="form-control">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Platform Iklan</label>
-            <select id="ads-modal-channel" class="form-control">
+            <label class="form-label">Platform Iklan <span style="color:var(--danger)">*</span></label>
+            <select id="ads-modal-channel" class="form-control" onchange="updateAdModalPreview()">
               <option value="shopee">Shopee Ads (TopAds)</option>
-              <option value="tiktok">TikTok Ads (GMV Max / Shop)</option>
+              <option value="tiktok">TikTok Ads (GMV Max / Shop Ads)</option>
               <option value="lazada">Lazada Sponsored Solutions</option>
             </select>
           </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Jenis Kampanye / Tipe Iklan</label>
-          <input type="text" id="ads-modal-type" class="form-control" placeholder="Contoh: Iklan Pencarian Kata Kunci / Live Shopping">
+
+        <!-- Periode Tanggal (Custom Date) -->
+        <div class="form-group" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label class="form-label" style="margin-bottom: 0; font-weight: 700; color: #1e293b;">
+              📅 Periode Tanggal Iklan (Custom Date)
+            </label>
+            <div style="display: flex; gap: 4px;">
+              <button type="button" class="btn btn-sm btn-outline" onclick="setAdModalDatePreset('today')" style="padding: 2px 8px; font-size: 11px; background: white; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;">Hari Ini</button>
+              <button type="button" class="btn btn-sm btn-outline" onclick="setAdModalDatePreset('7days')" style="padding: 2px 8px; font-size: 11px; background: white; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;">7 Hari</button>
+              <button type="button" class="btn btn-sm btn-outline" onclick="setAdModalDatePreset('month')" style="padding: 2px 8px; font-size: 11px; background: white; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;">Bulan Ini</button>
+              <button type="button" class="btn btn-sm btn-outline" onclick="setAdModalDatePreset('lastmonth')" style="padding: 2px 8px; font-size: 11px; background: white; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;">Bulan Lalu</button>
+            </div>
+          </div>
+          <div class="form-row" style="margin-bottom: 0;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 11px; color: #64748b;">Tanggal Mulai (Dari)</label>
+              <input type="date" id="ads-modal-start-date" class="form-control" onchange="updateAdModalPreview()">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 11px; color: #64748b;">Tanggal Selesai (Sampai)</label>
+              <input type="date" id="ads-modal-end-date" class="form-control" onchange="updateAdModalPreview()">
+            </div>
+          </div>
+          <div style="font-size: 11px; color: #64748b; margin-top: 6px;">
+            💡 <em>Pilih tanggal yang sama untuk catatan harian, atau tentukan rentang tanggal untuk iklan mingguan/bulanan.</em>
+          </div>
         </div>
+
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Biaya / Saldo Terpakai (Rp)</label>
-            <input type="number" id="ads-modal-spend" class="form-control" placeholder="Contoh: 50000">
+            <label class="form-label">Jenis Kampanye / Tipe Iklan</label>
+            <input type="text" id="ads-modal-type" class="form-control" placeholder="Contoh: Iklan Pencarian & Produk Terkait / GMV Max">
           </div>
           <div class="form-group">
-            <label class="form-label">Omset Penjualan Dari Iklan (Rp)</label>
-            <input type="number" id="ads-modal-sales" class="form-control" placeholder="Contoh: 400000">
+            <label class="form-label">Biaya Iklan Terpakai (Rp) <span style="color:var(--danger)">*</span></label>
+            <input type="number" id="ads-modal-spend" class="form-control" placeholder="Contoh: 500000" min="0" oninput="updateAdModalPreview()" style="font-weight: 700; font-size: 15px; color: var(--danger);">
           </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Catatan Tambahan</label>
-          <input type="text" id="ads-modal-notes" class="form-control" placeholder="Catatan optimasi atau target produk">
+
+        <!-- Automatic Calculation Box for Dashboard Omset & ROAS (Replaces manual sales input) -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <div style="font-size: 12px; font-weight: 700; color: #166534; display: flex; align-items: center; gap: 6px;">
+              <span>📈</span>
+              <span>Data Omset Toko & ROAS Otomatis (Dari Dashboard)</span>
+            </div>
+            <span class="badge badge-success" style="font-size: 10px; background: #dcfce7; color: #15803d; border: 1px solid #86efac;">Sinkron Realtime</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: white; border: 1px solid #dcfce7; border-radius: 6px; padding: 12px;">
+            <div>
+              <div style="font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase;">Omset Toko (Dashboard)</div>
+              <div id="ads-modal-preview-sales" style="font-size: 18px; font-weight: 800; color: #16a34a; margin-top: 2px;">Rp 0</div>
+              <div id="ads-modal-preview-sales-desc" style="font-size: 11px; color: #64748b; margin-top: 2px;">Data penjualan transaksi toko di periode ini</div>
+            </div>
+            <div>
+              <div style="font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase;">ROAS Otomatis</div>
+              <div id="ads-modal-preview-roas" style="font-size: 18px; font-weight: 800; color: #0f766e; margin-top: 2px;">-</div>
+              <div id="ads-modal-preview-acos" style="font-size: 11px; color: #64748b; margin-top: 2px;">ACOS: -</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Catatan Tambahan (Opsional)</label>
+          <input type="text" id="ads-modal-notes" class="form-control" placeholder="Contoh: Optimasi keyword vitamin D3, target produk bundling, dsb">
         </div>
       </div>
       <div class="modal-footer">
@@ -2208,6 +2271,6 @@
   <!-- SheetJS Library for 100% reliable Excel (.xlsx & .xls) reading -->
   <script src="xlsx.full.min.js?v=20261119_01"></script>
   <!-- Core App Logic -->
-  <script src="app.js?v=20261122_01"></script>
+  <script src="app.js?v=20261124_01"></script>
 </body>
 </html>
