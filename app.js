@@ -6331,25 +6331,65 @@ function deleteStockPurchase(id) {
 // MODAL & ACTION HANDLERS: IKLAN META (FACEBOOK & INSTAGRAM ADS)
 // =========================================================================
 
-function calculateMetaModalFees() {
+function calculateMetaModalFees(trigger = 'amount') {
   const amount = parseFloat(document.getElementById('meta-modal-amount')?.value) || 0;
-  // 1. Top Up Fee 5% dari biaya iklan
-  const fee = Math.round(amount * 0.05);
-  // 2. PPN 11% dari hasil top up fee 5% tersebut
-  const ppn = Math.round(fee * 0.11);
-  const total = amount + fee + ppn;
+  const feePct = parseFloat(document.getElementById('meta-modal-fee-pct')?.value) || 0;
+  const ppnPct = parseFloat(document.getElementById('meta-modal-ppn-pct')?.value) || 0;
 
   const elFee = document.getElementById('meta-modal-fee');
-  if (elFee) elFee.value = fee;
-
   const elPpn = document.getElementById('meta-modal-ppn');
-  if (elPpn) elPpn.value = ppn;
-
   const elTotInput = document.getElementById('meta-modal-total');
-  if (elTotInput) elTotInput.value = total;
-
   const elTotDisplay = document.getElementById('meta-modal-total-display');
+  const elFormulaDesc = document.getElementById('meta-modal-total-formula-desc');
+
+  let fee = 0;
+  let ppn = 0;
+
+  if (trigger === 'fee_manual') {
+    // User edited fee nominal directly
+    fee = parseFloat(elFee?.value) || 0;
+    ppn = Math.round(fee * (ppnPct / 100));
+    if (elPpn) elPpn.value = ppn;
+  } else if (trigger === 'ppn_manual') {
+    // User edited ppn nominal directly
+    fee = parseFloat(elFee?.value) || 0;
+    ppn = parseFloat(elPpn?.value) || 0;
+  } else if (trigger === 'ppn_pct') {
+    // User edited PPN percentage
+    fee = parseFloat(elFee?.value) || 0;
+    ppn = Math.round(fee * (ppnPct / 100));
+    if (elPpn) elPpn.value = ppn;
+  } else {
+    // trigger === 'amount' or 'fee_pct': recalculate fee and ppn from percentages
+    fee = Math.round(amount * (feePct / 100));
+    ppn = Math.round(fee * (ppnPct / 100));
+    if (elFee) elFee.value = fee;
+    if (elPpn) elPpn.value = ppn;
+  }
+
+  const total = amount + fee + ppn;
+
+  if (elTotInput) elTotInput.value = total;
   if (elTotDisplay) elTotDisplay.textContent = formatRupiah(total);
+  if (elFormulaDesc) {
+    elFormulaDesc.textContent = `Pokok: ${formatRupiah(amount)} + Fee (${feePct}%): ${formatRupiah(fee)} + PPN (${ppnPct}%): ${formatRupiah(ppn)}`;
+  }
+}
+
+function onMetaFeePctChange() {
+  calculateMetaModalFees('fee_pct');
+}
+
+function onMetaPpnPctChange() {
+  calculateMetaModalFees('ppn_pct');
+}
+
+function onMetaFeeManualChange() {
+  calculateMetaModalFees('fee_manual');
+}
+
+function onMetaPpnManualChange() {
+  calculateMetaModalFees('ppn_manual');
 }
 
 function openAddMetaAdsModal() {
@@ -6364,6 +6404,11 @@ function openAddMetaAdsModal() {
   document.getElementById('meta-modal-campaign').value = '';
   document.getElementById('meta-modal-account').value = '';
   document.getElementById('meta-modal-amount').value = '';
+
+  const elFeePct = document.getElementById('meta-modal-fee-pct');
+  if (elFeePct) elFeePct.value = '5';
+  const elPpnPct = document.getElementById('meta-modal-ppn-pct');
+  if (elPpnPct) elPpnPct.value = '11';
   
   const elFee = document.getElementById('meta-modal-fee');
   if (elFee) elFee.value = '';
@@ -6373,6 +6418,8 @@ function openAddMetaAdsModal() {
   if (elTotInput) elTotInput.value = '0';
   const elTotDisplay = document.getElementById('meta-modal-total-display');
   if (elTotDisplay) elTotDisplay.textContent = 'Rp 0';
+  const elFormulaDesc = document.getElementById('meta-modal-total-formula-desc');
+  if (elFormulaDesc) elFormulaDesc.textContent = 'Biaya Iklan Pokok + Top Up Fee + PPN';
 
   document.getElementById('meta-modal-notes').value = '';
   openModal('modal-meta-ads');
@@ -6392,9 +6439,11 @@ function saveMetaAdsFromModal() {
   const accountName = document.getElementById('meta-modal-account').value.trim();
   const amount = parseFloat(document.getElementById('meta-modal-amount').value) || 0;
   
-  // Hitung otomatis: 1. Top Up Fee 5% dari biaya iklan, 2. PPN 11% dari hasil top up fee 5% tersebut
-  const topUpFee = Math.round(amount * 0.05);
-  const ppnAmount = Math.round(topUpFee * 0.11);
+  // Ambil nilai persentase dan nominal yang dihitung otomatis atau diedit manual oleh user
+  const feePercent = parseFloat(document.getElementById('meta-modal-fee-pct')?.value) || 5;
+  const topUpFee = parseFloat(document.getElementById('meta-modal-fee')?.value) || 0;
+  const ppnPercent = parseFloat(document.getElementById('meta-modal-ppn-pct')?.value) || 11;
+  const ppnAmount = parseFloat(document.getElementById('meta-modal-ppn')?.value) || 0;
   const totalAmount = amount + topUpFee + ppnAmount;
 
   const notes = document.getElementById('meta-modal-notes').value.trim();
@@ -6424,7 +6473,9 @@ function saveMetaAdsFromModal() {
         campaignName,
         accountName,
         amount,
+        feePercent,
         topUpFee,
+        ppnPercent,
         ppnAmount,
         totalAmount,
         notes
@@ -6440,7 +6491,9 @@ function saveMetaAdsFromModal() {
       campaignName,
       accountName,
       amount,
+      feePercent,
       topUpFee,
+      ppnPercent,
       ppnAmount,
       totalAmount,
       notes
@@ -6471,9 +6524,16 @@ function editMetaAds(id) {
   document.getElementById('meta-modal-amount').value = item.amount || 0;
 
   const amt = Number(item.amount || 0);
-  const fee = item.topUpFee !== undefined ? Number(item.topUpFee) : Math.round(amt * 0.05);
-  const ppn = item.ppnAmount !== undefined ? Number(item.ppnAmount) : Math.round(fee * 0.11);
+  const feePct = item.feePercent !== undefined ? Number(item.feePercent) : 5;
+  const ppnPct = item.ppnPercent !== undefined ? Number(item.ppnPercent) : 11;
+  const fee = item.topUpFee !== undefined ? Number(item.topUpFee) : Math.round(amt * (feePct / 100));
+  const ppn = item.ppnAmount !== undefined ? Number(item.ppnAmount) : Math.round(fee * (ppnPct / 100));
   const total = item.totalAmount !== undefined ? Number(item.totalAmount) : (amt + fee + ppn);
+
+  const elFeePct = document.getElementById('meta-modal-fee-pct');
+  if (elFeePct) elFeePct.value = feePct;
+  const elPpnPct = document.getElementById('meta-modal-ppn-pct');
+  if (elPpnPct) elPpnPct.value = ppnPct;
 
   const elFee = document.getElementById('meta-modal-fee');
   if (elFee) elFee.value = fee;
@@ -6483,6 +6543,10 @@ function editMetaAds(id) {
   if (elTotInput) elTotInput.value = total;
   const elTotDisplay = document.getElementById('meta-modal-total-display');
   if (elTotDisplay) elTotDisplay.textContent = formatRupiah(total);
+  const elFormulaDesc = document.getElementById('meta-modal-total-formula-desc');
+  if (elFormulaDesc) {
+    elFormulaDesc.textContent = `Pokok: ${formatRupiah(amt)} + Fee (${feePct}%): ${formatRupiah(fee)} + PPN (${ppnPct}%): ${formatRupiah(ppn)}`;
+  }
 
   document.getElementById('meta-modal-notes').value = item.notes || '';
 
