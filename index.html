@@ -420,21 +420,26 @@
               <div>
                 <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
                   <span style="font-size: 20px;">⚖️</span>
-                  <span>Alokasi & Bagi Hasil Pendapatan Penjualan Bersih (Bagi Rata 4)</span>
-                  <span class="badge" style="background: #ecfdf5; color: #047857; font-size: 11px; font-weight: 800; border: 1px solid #a7f3d0;">25% Sama Rata</span>
+                  <span>Alokasi & Bagi Hasil Laba Bersih Usaha</span>
+                  <span class="badge" id="share-total-pct-badge" style="background: #ecfdf5; color: #047857; font-size: 11px; font-weight: 800; border: 1px solid #a7f3d0;">Total: 100%</span>
                 </div>
                 <div class="card-subtitle" id="profit-share-subtitle">
-                  Otomatis membagi total pendapatan penjualan bersih menjadi 4 bagian sama rata (25% per pos)
+                  Persentase alokasi bagi hasil dapat diatur manual dan otomatis tersimpan
                 </div>
               </div>
 
-              <!-- Basis Selector Switcher -->
-              <div style="display: flex; align-items: center; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: var(--radius-md);">
-                <button id="btn-basis-profit" class="btn btn-sm" onclick="setProfitSharingBasis('profit')" style="font-weight: 700; padding: 5px 12px; border-radius: var(--radius-sm); font-size: 11px; background: var(--primary); color: #ffffff;">
-                  ✓ Basis Utama: Laba Bersih Usaha
-                </button>
-                <button id="btn-basis-settlement" class="btn btn-sm" onclick="setProfitSharingBasis('settlement')" style="font-weight: 600; padding: 5px 12px; border-radius: var(--radius-sm); font-size: 11px; background: transparent; color: var(--text-muted);">
-                  Basis: Pencairan Penjualan Bersih
+              <!-- Basis Selector Switcher & Reset Button -->
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: var(--radius-md);">
+                  <button id="btn-basis-profit" class="btn btn-sm" onclick="setProfitSharingBasis('profit')" style="font-weight: 700; padding: 5px 12px; border-radius: var(--radius-sm); font-size: 11px; background: var(--primary); color: #ffffff;">
+                    ✓ Basis Utama: Laba Bersih Usaha
+                  </button>
+                  <button id="btn-basis-settlement" class="btn btn-sm" onclick="setProfitSharingBasis('settlement')" style="font-weight: 600; padding: 5px 12px; border-radius: var(--radius-sm); font-size: 11px; background: transparent; color: var(--text-muted);">
+                    Basis: Pencairan Penjualan Bersih
+                  </button>
+                </div>
+                <button class="btn btn-sm" onclick="resetProfitSharePercentages()" style="font-weight: 600; padding: 5px 12px; border-radius: var(--radius-sm); font-size: 11px; background: #ffffff; border: 1px solid #cbd5e1; color: #475569;" title="Kembalikan semua pos ke 25% sama rata">
+                  🔄 Reset 25% Rata
                 </button>
               </div>
             </div>
@@ -449,35 +454,45 @@
                 </div>
                 <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
                   <div style="text-align: right;">
-                    <div style="font-size: 11px; color: #047857; font-weight: 700;">Total Siap Dicairkan (75%)</div>
+                    <div style="font-size: 11px; color: #047857; font-weight: 700;" id="share-summary-withdrawn-lbl">Total Siap Dicairkan (75%)</div>
                     <div style="font-size: 16px; font-weight: 800; color: #047857;" id="share-total-withdrawn">Rp 0</div>
                     <div style="font-size: 11px; color: #059669;">Romie + Akrom + Tio</div>
                   </div>
                   <div style="width: 1px; height: 36px; background: #bbf7d0;"></div>
                   <div style="text-align: right;">
-                    <div style="font-size: 11px; color: #0284c7; font-weight: 700;">Masuk Laba Diputar (25%)</div>
+                    <div style="font-size: 11px; color: #0284c7; font-weight: 700;" id="share-summary-reinvest-lbl">Masuk Laba Diputar (25%)</div>
                     <div style="font-size: 16px; font-weight: 800; color: #0284c7;" id="share-total-reinvest">Rp 0</div>
                     <div style="font-size: 11px; color: #0369a1;">Modal Kas Berputar</div>
                   </div>
                 </div>
               </div>
 
-              <!-- 4 Columns Grid (Equal Share 25%) -->
+              <!-- 4 Columns Grid (Editable Percentages) -->
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px;">
                 <!-- 1. Romie -->
                 <div style="background: #ffffff; border: 1.5px solid #bbf7d0; border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden;">
                   <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: #10b981;"></div>
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                       <div style="width: 36px; height: 36px; border-radius: 50%; background: #d1fae5; color: #047857; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 15px;">R</div>
                       <div>
                         <div style="font-weight: 800; font-size: 15px; color: var(--text-dark);">1. Romie</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Porsi: 25.0%</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Porsi Bagi Hasil</div>
                       </div>
                     </div>
                     <span class="badge badge-success" style="font-size: 10px; font-weight: 800;">Akan Dicairkan</span>
                   </div>
-                  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Hak Penghasilan (25%)</div>
+
+                  <!-- Editable Percentage Input -->
+                  <div style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; margin: 8px 0 10px;">
+                    <span style="font-size: 11px; font-weight: 700; color: #334155;">Porsi Alokasi:</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <input type="number" id="input-share-romie" min="0" max="100" step="any" value="25" oninput="handleSharePercentageChange('romie', this.value)" style="width: 58px; height: 26px; padding: 2px 4px; font-weight: 800; font-size: 13px; text-align: center; border: 1.5px solid #10b981; border-radius: 4px; color: #047857; background: #ffffff;">
+                      <span style="font-weight: 800; font-size: 12px; color: #047857;">%</span>
+                    </div>
+                  </div>
+
+                  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;" id="share-lbl-romie">Hak Penghasilan (25%):</div>
                   <div style="font-size: 22px; font-weight: 800; color: #047857; margin-bottom: 6px;" id="share-amount-romie">Rp 0</div>
                   <div style="font-size: 11px; color: #059669; display: flex; align-items: center; gap: 4px;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -488,17 +503,27 @@
                 <!-- 2. Akrom -->
                 <div style="background: #ffffff; border: 1.5px solid #bbf7d0; border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden;">
                   <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: #10b981;"></div>
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                       <div style="width: 36px; height: 36px; border-radius: 50%; background: #d1fae5; color: #047857; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 15px;">A</div>
                       <div>
                         <div style="font-weight: 800; font-size: 15px; color: var(--text-dark);">2. Akrom</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Porsi: 25.0%</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Porsi Bagi Hasil</div>
                       </div>
                     </div>
                     <span class="badge badge-success" style="font-size: 10px; font-weight: 800;">Akan Dicairkan</span>
                   </div>
-                  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Hak Penghasilan (25%)</div>
+
+                  <!-- Editable Percentage Input -->
+                  <div style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; margin: 8px 0 10px;">
+                    <span style="font-size: 11px; font-weight: 700; color: #334155;">Porsi Alokasi:</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <input type="number" id="input-share-akrom" min="0" max="100" step="any" value="25" oninput="handleSharePercentageChange('akrom', this.value)" style="width: 58px; height: 26px; padding: 2px 4px; font-weight: 800; font-size: 13px; text-align: center; border: 1.5px solid #10b981; border-radius: 4px; color: #047857; background: #ffffff;">
+                      <span style="font-weight: 800; font-size: 12px; color: #047857;">%</span>
+                    </div>
+                  </div>
+
+                  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;" id="share-lbl-akrom">Hak Penghasilan (25%):</div>
                   <div style="font-size: 22px; font-weight: 800; color: #047857; margin-bottom: 6px;" id="share-amount-akrom">Rp 0</div>
                   <div style="font-size: 11px; color: #059669; display: flex; align-items: center; gap: 4px;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -509,17 +534,27 @@
                 <!-- 3. Tio -->
                 <div style="background: #ffffff; border: 1.5px solid #bbf7d0; border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden;">
                   <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: #10b981;"></div>
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                       <div style="width: 36px; height: 36px; border-radius: 50%; background: #d1fae5; color: #047857; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 15px;">T</div>
                       <div>
                         <div style="font-weight: 800; font-size: 15px; color: var(--text-dark);">3. Tio</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Porsi: 25.0%</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Porsi Bagi Hasil</div>
                       </div>
                     </div>
                     <span class="badge badge-success" style="font-size: 10px; font-weight: 800;">Akan Dicairkan</span>
                   </div>
-                  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Hak Penghasilan (25%)</div>
+
+                  <!-- Editable Percentage Input -->
+                  <div style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; margin: 8px 0 10px;">
+                    <span style="font-size: 11px; font-weight: 700; color: #334155;">Porsi Alokasi:</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <input type="number" id="input-share-tio" min="0" max="100" step="any" value="25" oninput="handleSharePercentageChange('tio', this.value)" style="width: 58px; height: 26px; padding: 2px 4px; font-weight: 800; font-size: 13px; text-align: center; border: 1.5px solid #10b981; border-radius: 4px; color: #047857; background: #ffffff;">
+                      <span style="font-weight: 800; font-size: 12px; color: #047857;">%</span>
+                    </div>
+                  </div>
+
+                  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;" id="share-lbl-tio">Hak Penghasilan (25%):</div>
                   <div style="font-size: 22px; font-weight: 800; color: #047857; margin-bottom: 6px;" id="share-amount-tio">Rp 0</div>
                   <div style="font-size: 11px; color: #059669; display: flex; align-items: center; gap: 4px;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -530,17 +565,27 @@
                 <!-- 4. Laba Diputar -->
                 <div style="background: #ffffff; border: 1.5px solid #bae6fd; border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden;">
                   <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: #0284c7;"></div>
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                       <div style="width: 36px; height: 36px; border-radius: 50%; background: #e0f2fe; color: #0284c7; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 16px;">🔄</div>
                       <div>
                         <div style="font-weight: 800; font-size: 15px; color: var(--text-dark);">4. Laba Diputar</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Porsi: 25.0%</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Porsi Modal Kas</div>
                       </div>
                     </div>
                     <span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 10px; font-weight: 800; border: 1px solid #bae6fd;">Modal Toko</span>
                   </div>
-                  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Reinvestasi Kas Modal (25%)</div>
+
+                  <!-- Editable Percentage Input -->
+                  <div style="display: flex; align-items: center; justify-content: space-between; background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 6px; padding: 6px 10px; margin: 8px 0 10px;">
+                    <span style="font-size: 11px; font-weight: 700; color: #0369a1;">Porsi Alokasi:</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <input type="number" id="input-share-reinvest" min="0" max="100" step="any" value="25" oninput="handleSharePercentageChange('reinvest', this.value)" style="width: 58px; height: 26px; padding: 2px 4px; font-weight: 800; font-size: 13px; text-align: center; border: 1.5px solid #0284c7; border-radius: 4px; color: #0369a1; background: #ffffff;">
+                      <span style="font-weight: 800; font-size: 12px; color: #0284c7;">%</span>
+                    </div>
+                  </div>
+
+                  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;" id="share-lbl-reinvest">Reinvestasi Kas Modal (25%):</div>
                   <div style="font-size: 22px; font-weight: 800; color: #0284c7; margin-bottom: 6px;" id="share-amount-reinvest">Rp 0</div>
                   <div style="font-size: 11px; color: #0284c7; display: flex; align-items: center; gap: 4px;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
@@ -1595,24 +1640,29 @@
                 </tr>
 
                 <tr>
-                  <td colspan="2" style="background: #f8fafc; padding: 16px 20px 8px; font-weight: 800; font-size: 13px; color: #047857; text-transform: uppercase; letter-spacing: 0.5px; border-top: 2px solid #e2e8f0;">
-                    ⚖️ ALOKASI & BAGI HASIL DARI LABA BERSIH (DIBAGI RATA 4 - MASING-MASING 25%)
+                  <td colspan="2" style="background: #f8fafc; padding: 14px 20px 8px; font-weight: 800; font-size: 13px; color: #047857; text-transform: uppercase; letter-spacing: 0.5px; border-top: 2px solid #e2e8f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                      <span id="pnl-share-section-title">⚖️ ALOKASI & BAGI HASIL DARI LABA BERSIH</span>
+                      <button class="btn btn-sm btn-outline no-print" onclick="switchTab('dashboard'); setTimeout(() => { document.getElementById('input-share-romie')?.focus(); }, 150);" style="font-size: 11px; padding: 3px 10px; background: white; border: 1px solid #a7f3d0; color: #047857; font-weight: 700; cursor: pointer;">
+                        ✏️ Edit Persentase di Dashboard
+                      </button>
+                    </div>
                   </td>
                 </tr>
                 <tr class="item">
-                  <td class="indent">1. Hak Penghasilan Romie (25% Laba Bersih - Dicairkan)</td>
+                  <td class="indent" id="pnl-lbl-romie">1. Hak Penghasilan Romie (25% Laba Bersih - Dicairkan)</td>
                   <td class="amount" id="pnl-share-romie" style="color: #047857; font-weight: 700;">Rp 0</td>
                 </tr>
                 <tr class="item">
-                  <td class="indent">2. Hak Penghasilan Akrom (25% Laba Bersih - Dicairkan)</td>
+                  <td class="indent" id="pnl-lbl-akrom">2. Hak Penghasilan Akrom (25% Laba Bersih - Dicairkan)</td>
                   <td class="amount" id="pnl-share-akrom" style="color: #047857; font-weight: 700;">Rp 0</td>
                 </tr>
                 <tr class="item">
-                  <td class="indent">3. Hak Penghasilan Tio (25% Laba Bersih - Dicairkan)</td>
+                  <td class="indent" id="pnl-lbl-tio">3. Hak Penghasilan Tio (25% Laba Bersih - Dicairkan)</td>
                   <td class="amount" id="pnl-share-tio" style="color: #047857; font-weight: 700;">Rp 0</td>
                 </tr>
                 <tr class="item">
-                  <td class="indent">4. Masuk ke Laba Diputar (25% Laba Bersih - Modal Berputar)</td>
+                  <td class="indent" id="pnl-lbl-reinvest">4. Masuk ke Laba Diputar (25% Laba Bersih - Modal Berputar)</td>
                   <td class="amount" id="pnl-share-reinvest" style="color: #0284c7; font-weight: 700;">Rp 0</td>
                 </tr>
               </tbody>
@@ -1646,6 +1696,56 @@
             </div>
 
             <button class="btn btn-primary" onclick="saveStoreSettings()">Simpan Pengaturan Profil</button>
+          </div>
+
+          <!-- Card Persentase Alokasi Bagi Hasil -->
+          <div class="card" style="max-width: 800px; margin: 0 auto 24px; border: 1.5px solid #a7f3d0;">
+            <div class="card-header">
+              <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+                <span>⚖️</span>
+                <span>Persentase Alokasi Bagi Hasil Laba Bersih</span>
+              </div>
+              <div class="card-subtitle">Atur persentase porsi pembagian keuntungan usaha untuk masing-masing pihak (Romie, Akrom, Tio, Laba Diputar)</div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 16px;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-weight: 700; color: #047857;">1. Romie (%)</label>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <input type="number" id="setting-share-romie" class="form-control" value="25" min="0" max="100" step="any" style="font-weight: 700;">
+                  <span style="font-weight: 700;">%</span>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-weight: 700; color: #047857;">2. Akrom (%)</label>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <input type="number" id="setting-share-akrom" class="form-control" value="25" min="0" max="100" step="any" style="font-weight: 700;">
+                  <span style="font-weight: 700;">%</span>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-weight: 700; color: #047857;">3. Tio (%)</label>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <input type="number" id="setting-share-tio" class="form-control" value="25" min="0" max="100" step="any" style="font-weight: 700;">
+                  <span style="font-weight: 700;">%</span>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-weight: 700; color: #0284c7;">4. Laba Diputar (%)</label>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <input type="number" id="setting-share-reinvest" class="form-control" value="25" min="0" max="100" step="any" style="font-weight: 700;">
+                  <span style="font-weight: 700;">%</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <span id="setting-share-total-hint" style="font-size: 12px; color: #047857; font-weight: 600;">Total Porsi: 100%</span>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary btn-sm" onclick="resetProfitSharePercentages(); renderSettings();">Reset 25% Rata</button>
+                <button class="btn btn-primary btn-sm" onclick="saveProfitShareSettingsFromView()">Simpan Persentase Bagi Hasil</button>
+              </div>
+            </div>
           </div>
 
           <div class="card" style="max-width: 800px; margin: 0 auto;">
@@ -2298,6 +2398,6 @@
   <!-- html2pdf Library for Direct PDF Export from HTML -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <!-- Core App Logic -->
-  <script src="app.js?v=20261125_02"></script>
+  <script src="app.js?v=20261125_03"></script>
 </body>
 </html>
