@@ -1218,7 +1218,8 @@ function renderDashboard() {
   const isSettlement = profitSharingBasis === 'settlement';
   const rawBase = isSettlement ? Number(metrics.netSettlement || 0) : Number(metrics.netProfit || 0);
   const baseAmount = Math.max(0, Math.round(rawBase));
-  const autoReinvest = Math.round(baseAmount * (pcts.reinvest / 100));
+  const shares = calculateProfitShares(baseAmount, pcts);
+  const autoReinvest = shares.reinvestAmount;
   const displayProfitReinvest = (metrics.totalProfitReinvest && metrics.totalProfitReinvest > 0)
     ? metrics.totalProfitReinvest
     : autoReinvest;
@@ -1231,7 +1232,7 @@ function renderDashboard() {
       elDashDetails.innerHTML = `
         <div>Modal Kas Perusahaan: <strong id="dash-capital-in" style="color: #047857;">${formatRupiah(metrics.totalCapitalIn)}</strong></div>
         <div>Sisa Hutang: <strong id="dash-capital-debt" style="color: #b91c1c;">${formatRupiah(metrics.remainingDebt)}</strong></div>
-        <div>Laba Diputar (${pcts.reinvest}%): <strong id="dash-capital-profit" style="color: #059669;">${formatRupiah(displayProfitReinvest)}</strong></div>
+        <div>Laba Diputar (${formatPct(pcts.reinvest)}%): <strong id="dash-capital-profit" style="color: #059669;">${formatRupiah(displayProfitReinvest)}</strong></div>
         <button class="btn btn-sm btn-outline-primary" onclick="switchTab('capital')" style="padding: 4px 12px; font-weight: 600; background: #ffffff;">
           Buku Kas & Modal &rarr;
         </button>
@@ -1270,6 +1271,19 @@ function renderDashboard() {
 // 4. Laba Diputar (Default 25% Modal Berputar)
 // ==========================================
 
+function formatPct(num) {
+  if (typeof num !== 'number' || isNaN(num)) return '0';
+  if (Math.abs(num - Math.round(num)) < 0.001) {
+    return Math.round(num).toString();
+  }
+  const oneDec = Math.round(num * 10) / 10;
+  if (Math.abs(num - oneDec) < 0.005) {
+    return oneDec.toString();
+  }
+  return (Math.round(num * 100) / 100).toString();
+}
+window.formatPct = formatPct;
+
 function getProfitSharePercentages() {
   const store = db.getStore();
   const def = { romie: 25, akrom: 25, tio: 25, reinvest: 25 };
@@ -1289,37 +1303,130 @@ function saveProfitSharePercentages(p) {
   const store = db.getStore();
   if (!store.settings) store.settings = {};
   store.settings.profitSharePercentages = {
-    romie: Math.max(0, Number(p.romie || 0)),
-    akrom: Math.max(0, Number(p.akrom || 0)),
-    tio: Math.max(0, Number(p.tio || 0)),
-    reinvest: Math.max(0, Number(p.reinvest || 0))
+    romie: Math.max(0, Math.round(Number(p.romie || 0) * 100) / 100),
+    akrom: Math.max(0, Math.round(Number(p.akrom || 0) * 100) / 100),
+    tio: Math.max(0, Math.round(Number(p.tio || 0) * 100) / 100),
+    reinvest: Math.max(0, Math.round(Number(p.reinvest || 0) * 100) / 100)
   };
   db.saveData(store);
 }
 window.saveProfitSharePercentages = saveProfitSharePercentages;
 
-function handleSharePercentageChange(key, value) {
-  const num = parseFloat(value);
-  const validVal = isNaN(num) || num < 0 ? 0 : num;
-  
-  const pcts = getProfitSharePercentages();
-  pcts[key] = validVal;
-  saveProfitSharePercentages(pcts);
+function calculateProfitShares(baseAmount, pcts = null) {
+  if (!pcts) pcts = getProfitSharePercentages();
+  const base = Math.max(0, Math.round(Number(baseAmount) || 0));
+  const totalPct = Math.round((pcts.romie + pcts.akrom + pcts.tio + pcts.reinvest) * 100) / 100;
 
+  let romieAmount = Math.round(base * (pcts.romie / 100));
+  let akromAmount = Math.round(base * (pcts.akrom / 100));
+  let tioAmount = Math.round(base * (pcts.tio / 100));
+  let reinvestAmount = Math.round(base * (pcts.reinvest / 100));
+
+  // If total equals 100% (within tolerance), balance residual to ensure exact sum equals base
+  if (Math.abs(totalPct - 100) < 0.05) {
+    if (pcts.reinvest <= 0.001) {
+      // Reinvest is 0%: all profit goes to Romie, Akrom, Tio
+      reinvestAmount = 0;
+      tioAmount = Math.max(0, base - romieAmount - akromAmount);
+    } else {
+      // Reinvest absorbs the residual so sum is exactly base
+      reinvestAmount = Math.max(0, base - romieAmount - akromAmount - tioAmount);
+    }
+  }
+
+  const withdrawnTotal = romieAmount + akromAmount + tioAmount;
+
+  return {
+    baseAmount: base,
+    romieAmount,
+    akromAmount,
+    tioAmount,
+    reinvestAmount,
+    withdrawnTotal,
+    totalPct,
+    isBalanced: Math.abs(totalPct - 100) < 0.05
+  };
+}
+window.calculateProfitShares = calculateProfitShares;
+
+function handleSharePercentageChange(changedKey, value) {
+  if (value === '' || value === null || value === undefined) return;
+  const num = parseFloat(value);
+  if (isNaN(num)) return;
+  const clampedVal = Math.max(0, Math.min(100, Math.round(num * 100) / 100));
+
+  const current = getProfitSharePercentages();
+  const keys = ['romie', 'akrom', 'tio', 'reinvest'];
+  const otherKeys = keys.filter(k => k !== changedKey);
+  const remaining = Math.max(0, Math.round((100 - clampedVal) * 100) / 100);
+
+  let sumOthers = 0;
+  otherKeys.forEach(k => { sumOthers += (Number(current[k]) || 0); });
+
+  const updated = {};
+  updated[changedKey] = clampedVal;
+
+  if (sumOthers <= 0.0001) {
+    // If all other keys were 0, distribute remaining equally among them
+    const eqShare = Math.floor((remaining / otherKeys.length) * 100) / 100;
+    let allocated = 0;
+    for (let i = 0; i < otherKeys.length; i++) {
+      const k = otherKeys[i];
+      if (i === otherKeys.length - 1) {
+        updated[k] = Math.max(0, Math.round((remaining - allocated) * 100) / 100);
+      } else {
+        updated[k] = eqShare;
+        allocated = Math.round((allocated + eqShare) * 100) / 100;
+      }
+    }
+  } else {
+    // Proportional redistribution based on relative previous ratios
+    let allocated = 0;
+    for (let i = 0; i < otherKeys.length; i++) {
+      const k = otherKeys[i];
+      if (i === otherKeys.length - 1) {
+        updated[k] = Math.max(0, Math.round((remaining - allocated) * 100) / 100);
+      } else {
+        const ratio = (Number(current[k]) || 0) / sumOthers;
+        const share = Math.round(remaining * ratio * 100) / 100;
+        updated[k] = share;
+        allocated = Math.round((allocated + share) * 100) / 100;
+      }
+    }
+  }
+
+  saveProfitSharePercentages(updated);
   renderProfitSharingWidget();
   const pnlView = document.getElementById('view-pnl');
   if (pnlView && pnlView.style.display !== 'none') {
     renderPnL();
   }
+  renderDashboard();
 }
 window.handleSharePercentageChange = handleSharePercentageChange;
 
-function resetProfitSharePercentages() {
-  saveProfitSharePercentages({ romie: 25, akrom: 25, tio: 25, reinvest: 25 });
-  showToast('Persentase bagi hasil direset ke 25% sama rata.', 'info');
+function handleSharePercentageBlur(inputEl, key) {
+  const pcts = getProfitSharePercentages();
+  if (inputEl) {
+    inputEl.value = formatPct(pcts[key]);
+  }
+}
+window.handleSharePercentageBlur = handleSharePercentageBlur;
+
+function applyProfitSharePreset(r, a, t, re) {
+  saveProfitSharePercentages({ romie: r, akrom: a, tio: t, reinvest: re });
+  showToast(`Preset diterapkan: Romie ${formatPct(r)}%, Akrom ${formatPct(a)}%, Tio ${formatPct(t)}%, Laba Diputar ${formatPct(re)}%`, 'success');
   renderProfitSharingWidget();
-  renderPnL();
+  const pnlView = document.getElementById('view-pnl');
+  if (pnlView && pnlView.style.display !== 'none') {
+    renderPnL();
+  }
   renderDashboard();
+}
+window.applyProfitSharePreset = applyProfitSharePreset;
+
+function resetProfitSharePercentages() {
+  applyProfitSharePreset(25, 25, 25, 25);
 }
 window.resetProfitSharePercentages = resetProfitSharePercentages;
 
@@ -1386,25 +1493,14 @@ function renderProfitSharingWidget(metrics = null) {
   const rawBase = isSettlement ? Number(metrics.netSettlement || 0) : Number(metrics.netProfit || 0);
   const baseAmount = Math.max(0, Math.round(rawBase));
 
-  const romieAmount = Math.round(baseAmount * (pcts.romie / 100));
-  const akromAmount = Math.round(baseAmount * (pcts.akrom / 100));
-  const tioAmount = Math.round(baseAmount * (pcts.tio / 100));
-  const withdrawnTotal = romieAmount + akromAmount + tioAmount;
-
-  const totalPct = pcts.romie + pcts.akrom + pcts.tio + pcts.reinvest;
-  let reinvestTotal;
-  if (Math.abs(totalPct - 100) < 0.01) {
-    reinvestTotal = Math.max(0, baseAmount - withdrawnTotal);
-  } else {
-    reinvestTotal = Math.round(baseAmount * (pcts.reinvest / 100));
-  }
-  const totalWithdrawnPct = (pcts.romie + pcts.akrom + pcts.tio).toFixed(1).replace(/\.0$/, '');
-  const reinvestPct = pcts.reinvest.toFixed(1).replace(/\.0$/, '');
+  const shares = calculateProfitShares(baseAmount, pcts);
+  const totalWithdrawnPct = formatPct(pcts.romie + pcts.akrom + pcts.tio);
+  const reinvestPct = formatPct(pcts.reinvest);
 
   // Total Percentage Badge
   const totalBadgeEl = document.getElementById('share-total-pct-badge');
   if (totalBadgeEl) {
-    if (Math.abs(totalPct - 100) < 0.01) {
+    if (shares.isBalanced) {
       totalBadgeEl.style.background = '#ecfdf5';
       totalBadgeEl.style.color = '#047857';
       totalBadgeEl.style.borderColor = '#a7f3d0';
@@ -1413,7 +1509,7 @@ function renderProfitSharingWidget(metrics = null) {
       totalBadgeEl.style.background = '#fef3c7';
       totalBadgeEl.style.color = '#b45309';
       totalBadgeEl.style.borderColor = '#fde68a';
-      totalBadgeEl.textContent = `⚠️ Total: ${totalPct.toFixed(1).replace(/\.0$/, '')}%`;
+      totalBadgeEl.textContent = `⚠️ Total: ${formatPct(shares.totalPct)}%`;
     }
   }
 
@@ -1442,47 +1538,47 @@ function renderProfitSharingWidget(metrics = null) {
   if (summaryWithdrawnLbl) summaryWithdrawnLbl.textContent = `Total Siap Dicairkan (${totalWithdrawnPct}%)`;
 
   const totalWithdrawnEl = document.getElementById('share-total-withdrawn');
-  if (totalWithdrawnEl) totalWithdrawnEl.textContent = formatRupiah(withdrawnTotal);
+  if (totalWithdrawnEl) totalWithdrawnEl.textContent = formatRupiah(shares.withdrawnTotal);
 
   const summaryReinvestLbl = document.getElementById('share-summary-reinvest-lbl');
   if (summaryReinvestLbl) summaryReinvestLbl.textContent = `Masuk Laba Diputar (${reinvestPct}%)`;
 
   const totalReinvestEl = document.getElementById('share-total-reinvest');
-  if (totalReinvestEl) totalReinvestEl.textContent = formatRupiah(reinvestTotal);
+  if (totalReinvestEl) totalReinvestEl.textContent = formatRupiah(shares.reinvestAmount);
 
   // Update Percentage Inputs (only if not currently focused by user)
   const inpRomie = document.getElementById('input-share-romie');
-  if (inpRomie && document.activeElement !== inpRomie) inpRomie.value = pcts.romie;
+  if (inpRomie && document.activeElement !== inpRomie) inpRomie.value = formatPct(pcts.romie);
 
   const inpAkrom = document.getElementById('input-share-akrom');
-  if (inpAkrom && document.activeElement !== inpAkrom) inpAkrom.value = pcts.akrom;
+  if (inpAkrom && document.activeElement !== inpAkrom) inpAkrom.value = formatPct(pcts.akrom);
 
   const inpTio = document.getElementById('input-share-tio');
-  if (inpTio && document.activeElement !== inpTio) inpTio.value = pcts.tio;
+  if (inpTio && document.activeElement !== inpTio) inpTio.value = formatPct(pcts.tio);
 
   const inpReinvest = document.getElementById('input-share-reinvest');
-  if (inpReinvest && document.activeElement !== inpReinvest) inpReinvest.value = pcts.reinvest;
+  if (inpReinvest && document.activeElement !== inpReinvest) inpReinvest.value = formatPct(pcts.reinvest);
 
   // Labels and Nominals
   const lblRomie = document.getElementById('share-lbl-romie');
-  if (lblRomie) lblRomie.textContent = `Hak Penghasilan (${pcts.romie}%):`;
+  if (lblRomie) lblRomie.textContent = `Hak Penghasilan (${formatPct(pcts.romie)}%):`;
   const elRomie = document.getElementById('share-amount-romie');
-  if (elRomie) elRomie.textContent = formatRupiah(romieAmount);
+  if (elRomie) elRomie.textContent = formatRupiah(shares.romieAmount);
 
   const lblAkrom = document.getElementById('share-lbl-akrom');
-  if (lblAkrom) lblAkrom.textContent = `Hak Penghasilan (${pcts.akrom}%):`;
+  if (lblAkrom) lblAkrom.textContent = `Hak Penghasilan (${formatPct(pcts.akrom)}%):`;
   const elAkrom = document.getElementById('share-amount-akrom');
-  if (elAkrom) elAkrom.textContent = formatRupiah(akromAmount);
+  if (elAkrom) elAkrom.textContent = formatRupiah(shares.akromAmount);
 
   const lblTio = document.getElementById('share-lbl-tio');
-  if (lblTio) lblTio.textContent = `Hak Penghasilan (${pcts.tio}%):`;
+  if (lblTio) lblTio.textContent = `Hak Penghasilan (${formatPct(pcts.tio)}%):`;
   const elTio = document.getElementById('share-amount-tio');
-  if (elTio) elTio.textContent = formatRupiah(tioAmount);
+  if (elTio) elTio.textContent = formatRupiah(shares.tioAmount);
 
   const lblReinvest = document.getElementById('share-lbl-reinvest');
-  if (lblReinvest) lblReinvest.textContent = `Reinvestasi Kas Modal (${pcts.reinvest}%):`;
+  if (lblReinvest) lblReinvest.textContent = `Reinvestasi Kas Modal (${formatPct(pcts.reinvest)}%):`;
   const elReinvest = document.getElementById('share-amount-reinvest');
-  if (elReinvest) elReinvest.textContent = formatRupiah(reinvestTotal);
+  if (elReinvest) elReinvest.textContent = formatRupiah(shares.reinvestAmount);
 }
 window.renderProfitSharingWidget = renderProfitSharingWidget;
 
@@ -5561,46 +5657,33 @@ function renderPnL() {
   const isSettlement = profitSharingBasis === 'settlement';
   const rawBase = isSettlement ? Number(metrics.netSettlement || 0) : Number(metrics.netProfit || 0);
   const pnlBase = Math.max(0, Math.round(rawBase));
-
-  const pnlRomie = Math.round(pnlBase * (pcts.romie / 100));
-  const pnlAkrom = Math.round(pnlBase * (pcts.akrom / 100));
-  const pnlTio = Math.round(pnlBase * (pcts.tio / 100));
-  const withdrawnTotal = pnlRomie + pnlAkrom + pnlTio;
-
-  const totalPct = pcts.romie + pcts.akrom + pcts.tio + pcts.reinvest;
-  let pnlReinvest;
-  if (Math.abs(totalPct - 100) < 0.01) {
-    pnlReinvest = Math.max(0, pnlBase - withdrawnTotal);
-  } else {
-    pnlReinvest = Math.round(pnlBase * (pcts.reinvest / 100));
-  }
-
+  const shares = calculateProfitShares(pnlBase, pcts);
   const baseName = isSettlement ? 'Pencairan Bersih' : 'Laba Bersih';
 
   const secTitleEl = document.getElementById('pnl-share-section-title');
   if (secTitleEl) {
-    secTitleEl.textContent = `⚖️ ALOKASI & BAGI HASIL DARI ${baseName.toUpperCase()} (${pcts.romie}%, ${pcts.akrom}%, ${pcts.tio}%, ${pcts.reinvest}%)`;
+    secTitleEl.textContent = `⚖️ ALOKASI & BAGI HASIL DARI ${baseName.toUpperCase()} (${formatPct(pcts.romie)}%, ${formatPct(pcts.akrom)}%, ${formatPct(pcts.tio)}%, ${formatPct(pcts.reinvest)}%)`;
   }
 
   const elLblRomie = document.getElementById('pnl-lbl-romie');
-  if (elLblRomie) elLblRomie.textContent = `1. Hak Penghasilan Romie (${pcts.romie}% ${baseName} - Dicairkan)`;
+  if (elLblRomie) elLblRomie.textContent = `1. Hak Penghasilan Romie (${formatPct(pcts.romie)}% ${baseName} - Dicairkan)`;
   const elPnlRomie = document.getElementById('pnl-share-romie');
-  if (elPnlRomie) elPnlRomie.textContent = formatRupiah(pnlRomie);
+  if (elPnlRomie) elPnlRomie.textContent = formatRupiah(shares.romieAmount);
 
   const elLblAkrom = document.getElementById('pnl-lbl-akrom');
-  if (elLblAkrom) elLblAkrom.textContent = `2. Hak Penghasilan Akrom (${pcts.akrom}% ${baseName} - Dicairkan)`;
+  if (elLblAkrom) elLblAkrom.textContent = `2. Hak Penghasilan Akrom (${formatPct(pcts.akrom)}% ${baseName} - Dicairkan)`;
   const elPnlAkrom = document.getElementById('pnl-share-akrom');
-  if (elPnlAkrom) elPnlAkrom.textContent = formatRupiah(pnlAkrom);
+  if (elPnlAkrom) elPnlAkrom.textContent = formatRupiah(shares.akromAmount);
 
   const elLblTio = document.getElementById('pnl-lbl-tio');
-  if (elLblTio) elLblTio.textContent = `3. Hak Penghasilan Tio (${pcts.tio}% ${baseName} - Dicairkan)`;
+  if (elLblTio) elLblTio.textContent = `3. Hak Penghasilan Tio (${formatPct(pcts.tio)}% ${baseName} - Dicairkan)`;
   const elPnlTio = document.getElementById('pnl-share-tio');
-  if (elPnlTio) elPnlTio.textContent = formatRupiah(pnlTio);
+  if (elPnlTio) elPnlTio.textContent = formatRupiah(shares.tioAmount);
 
   const elLblReinvest = document.getElementById('pnl-lbl-reinvest');
-  if (elLblReinvest) elLblReinvest.textContent = `4. Masuk ke Laba Diputar (${pcts.reinvest}% ${baseName} - Modal Berputar)`;
+  if (elLblReinvest) elLblReinvest.textContent = `4. Masuk ke Laba Diputar (${formatPct(pcts.reinvest)}% ${baseName} - Modal Berputar)`;
   const elPnlReinvest = document.getElementById('pnl-share-reinvest');
-  if (elPnlReinvest) elPnlReinvest.textContent = formatRupiah(pnlReinvest);
+  if (elPnlReinvest) elPnlReinvest.textContent = formatRupiah(shares.reinvestAmount);
 }
 
 // =========================================================================
@@ -5638,17 +5721,7 @@ function downloadPnLExcel() {
   const isSettlement = profitSharingBasis === 'settlement';
   const rawBase = isSettlement ? Number(metrics.netSettlement || 0) : Number(metrics.netProfit || 0);
   const pnlBase = Math.max(0, Math.round(rawBase));
-  const pnlRomie = Math.round(pnlBase * (pcts.romie / 100));
-  const pnlAkrom = Math.round(pnlBase * (pcts.akrom / 100));
-  const pnlTio = Math.round(pnlBase * (pcts.tio / 100));
-  const withdrawnTotal = pnlRomie + pnlAkrom + pnlTio;
-  const totalPct = pcts.romie + pcts.akrom + pcts.tio + pcts.reinvest;
-  let pnlReinvest;
-  if (Math.abs(totalPct - 100) < 0.01) {
-    pnlReinvest = Math.max(0, pnlBase - withdrawnTotal);
-  } else {
-    pnlReinvest = Math.round(pnlBase * (pcts.reinvest / 100));
-  }
+  const shares = calculateProfitShares(pnlBase, pcts);
   const totalOpexAndAds = (metrics.totalAdsSpend || 0) + (metrics.totalMetaAds || 0) + (metrics.totalOpex || 0);
 
   // Data matrix for Excel
@@ -5682,11 +5755,11 @@ function downloadPnLExcel() {
     ['', '', ''],
     ['LABA BERSIH USAHA (NET PROFIT)', Number(metrics.netProfit || 0), 'Laba Kotor - Total Beban'],
     ['', '', ''],
-    [`ALOKASI & BAGI HASIL DARI LABA BERSIH (${pcts.romie}%, ${pcts.akrom}%, ${pcts.tio}%, ${pcts.reinvest}%)`, '', ''],
-    [`   - 1. Hak Penghasilan Romie (${pcts.romie}% - Dicairkan)`, pnlRomie, `Bagi Hasil ${pcts.romie}%`],
-    [`   - 2. Hak Penghasilan Akrom (${pcts.akrom}% - Dicairkan)`, pnlAkrom, `Bagi Hasil ${pcts.akrom}%`],
-    [`   - 3. Hak Penghasilan Tio (${pcts.tio}% - Dicairkan)`, pnlTio, `Bagi Hasil ${pcts.tio}%`],
-    [`   - 4. Masuk ke Laba Diputar (${pcts.reinvest}% - Modal Berputar)`, pnlReinvest, `Modal Perputaran Usaha ${pcts.reinvest}%`],
+    [`ALOKASI & BAGI HASIL DARI LABA BERSIH (${formatPct(pcts.romie)}%, ${formatPct(pcts.akrom)}%, ${formatPct(pcts.tio)}%, ${formatPct(pcts.reinvest)}%)`, '', ''],
+    [`   - 1. Hak Penghasilan Romie (${formatPct(pcts.romie)}% - Dicairkan)`, shares.romieAmount, `Bagi Hasil ${formatPct(pcts.romie)}%`],
+    [`   - 2. Hak Penghasilan Akrom (${formatPct(pcts.akrom)}% - Dicairkan)`, shares.akromAmount, `Bagi Hasil ${formatPct(pcts.akrom)}%`],
+    [`   - 3. Hak Penghasilan Tio (${formatPct(pcts.tio)}% - Dicairkan)`, shares.tioAmount, `Bagi Hasil ${formatPct(pcts.tio)}%`],
+    [`   - 4. Masuk ke Laba Diputar (${formatPct(pcts.reinvest)}% - Modal Berputar)`, shares.reinvestAmount, `Modal Perputaran Usaha ${formatPct(pcts.reinvest)}%`],
   ];
 
   if (typeof XLSX !== 'undefined' && XLSX.utils && XLSX.utils.aoa_to_sheet) {
@@ -5734,17 +5807,7 @@ function downloadPnLCSV() {
   const isSettlement = profitSharingBasis === 'settlement';
   const rawBase = isSettlement ? Number(metrics.netSettlement || 0) : Number(metrics.netProfit || 0);
   const pnlBase = Math.max(0, Math.round(rawBase));
-  const pnlRomie = Math.round(pnlBase * (pcts.romie / 100));
-  const pnlAkrom = Math.round(pnlBase * (pcts.akrom / 100));
-  const pnlTio = Math.round(pnlBase * (pcts.tio / 100));
-  const withdrawnTotal = pnlRomie + pnlAkrom + pnlTio;
-  const totalPct = pcts.romie + pcts.akrom + pcts.tio + pcts.reinvest;
-  let pnlReinvest;
-  if (Math.abs(totalPct - 100) < 0.01) {
-    pnlReinvest = Math.max(0, pnlBase - withdrawnTotal);
-  } else {
-    pnlReinvest = Math.round(pnlBase * (pcts.reinvest / 100));
-  }
+  const shares = calculateProfitShares(pnlBase, pcts);
   const totalOpexAndAds = (metrics.totalAdsSpend || 0) + (metrics.totalMetaAds || 0) + (metrics.totalOpex || 0);
 
   const rows = [
@@ -5771,11 +5834,11 @@ function downloadPnLCSV() {
     ['Bahan Packing & Beban Operasional Toko', -(metrics.totalOpex || 0)],
     ['Total Beban Operasional & Iklan', -totalOpexAndAds],
     ['LABA BERSIH USAHA (NET PROFIT)', metrics.netProfit || 0],
-    [`ALOKASI & BAGI HASIL DARI LABA BERSIH (${pcts.romie}%, ${pcts.akrom}%, ${pcts.tio}%, ${pcts.reinvest}%)`, ''],
-    [`Hak Penghasilan Romie (${pcts.romie}% - Dicairkan)`, pnlRomie],
-    [`Hak Penghasilan Akrom (${pcts.akrom}% - Dicairkan)`, pnlAkrom],
-    [`Hak Penghasilan Tio (${pcts.tio}% - Dicairkan)`, pnlTio],
-    [`Masuk ke Laba Diputar (${pcts.reinvest}% - Modal Berputar)`, pnlReinvest],
+    [`ALOKASI & BAGI HASIL DARI LABA BERSIH (${formatPct(pcts.romie)}%, ${formatPct(pcts.akrom)}%, ${formatPct(pcts.tio)}%, ${formatPct(pcts.reinvest)}%)`, ''],
+    [`Hak Penghasilan Romie (${formatPct(pcts.romie)}% - Dicairkan)`, shares.romieAmount],
+    [`Hak Penghasilan Akrom (${formatPct(pcts.akrom)}% - Dicairkan)`, shares.akromAmount],
+    [`Hak Penghasilan Tio (${formatPct(pcts.tio)}% - Dicairkan)`, shares.tioAmount],
+    [`Masuk ke Laba Diputar (${formatPct(pcts.reinvest)}% - Modal Berputar)`, shares.reinvestAmount],
   ];
 
   const csvContent = '\uFEFF' + rows.map(r => 
@@ -5864,17 +5927,7 @@ function generateVectorPnLPDF(filename) {
     const isSettlement = profitSharingBasis === 'settlement';
     const rawBase = isSettlement ? Number(metrics.netSettlement || 0) : Number(metrics.netProfit || 0);
     const pnlBase = Math.max(0, Math.round(rawBase));
-    const pnlRomie = Math.round(pnlBase * (pcts.romie / 100));
-    const pnlAkrom = Math.round(pnlBase * (pcts.akrom / 100));
-    const pnlTio = Math.round(pnlBase * (pcts.tio / 100));
-    const withdrawnTotal = pnlRomie + pnlAkrom + pnlTio;
-    const totalPct = pcts.romie + pcts.akrom + pcts.tio + pcts.reinvest;
-    let pnlReinvest;
-    if (Math.abs(totalPct - 100) < 0.01) {
-      pnlReinvest = Math.max(0, pnlBase - withdrawnTotal);
-    } else {
-      pnlReinvest = Math.round(pnlBase * (pcts.reinvest / 100));
-    }
+    const shares = calculateProfitShares(pnlBase, pcts);
     const totalOpexAndAds = (metrics.totalAdsSpend || 0) + (metrics.totalMetaAds || 0) + (metrics.totalOpex || 0);
 
     function formatPdfRp(num) {
@@ -5919,11 +5972,11 @@ function generateVectorPnLPDF(filename) {
       
       { type: 'grand', title: 'LABA BERSIH USAHA (NET PROFIT)', val: formatPdfRp(metrics.netProfit || 0) },
       
-      { type: 'header', title: `ALOKASI & BAGI HASIL DARI LABA BERSIH (${pcts.romie}%, ${pcts.akrom}%, ${pcts.tio}%, ${pcts.reinvest}%)`, val: '' },
-      { type: 'share', title: `  1. Hak Penghasilan Romie (${pcts.romie}% - Dicairkan)`, val: formatPdfRp(pnlRomie) },
-      { type: 'share', title: `  2. Hak Penghasilan Akrom (${pcts.akrom}% - Dicairkan)`, val: formatPdfRp(pnlAkrom) },
-      { type: 'share', title: `  3. Hak Penghasilan Tio (${pcts.tio}% - Dicairkan)`, val: formatPdfRp(pnlTio) },
-      { type: 'share', title: `  4. Masuk ke Laba Diputar (${pcts.reinvest}% - Modal Berputar)`, val: formatPdfRp(pnlReinvest) }
+      { type: 'header', title: `ALOKASI & BAGI HASIL DARI LABA BERSIH (${formatPct(pcts.romie)}%, ${formatPct(pcts.akrom)}%, ${formatPct(pcts.tio)}%, ${formatPct(pcts.reinvest)}%)`, val: '' },
+      { type: 'share', title: `  1. Hak Penghasilan Romie (${formatPct(pcts.romie)}% - Dicairkan)`, val: formatPdfRp(shares.romieAmount) },
+      { type: 'share', title: `  2. Hak Penghasilan Akrom (${formatPct(pcts.akrom)}% - Dicairkan)`, val: formatPdfRp(shares.akromAmount) },
+      { type: 'share', title: `  3. Hak Penghasilan Tio (${formatPct(pcts.tio)}% - Dicairkan)`, val: formatPdfRp(shares.tioAmount) },
+      { type: 'share', title: `  4. Masuk ke Laba Diputar (${formatPct(pcts.reinvest)}% - Modal Berputar)`, val: formatPdfRp(shares.reinvestAmount) }
     ];
 
     const ops = [];
@@ -6048,21 +6101,35 @@ function renderSettings() {
 
   const pcts = getProfitSharePercentages();
   const elSetRomie = document.getElementById('setting-share-romie');
-  if (elSetRomie) elSetRomie.value = pcts.romie;
+  if (elSetRomie) elSetRomie.value = formatPct(pcts.romie);
   const elSetAkrom = document.getElementById('setting-share-akrom');
-  if (elSetAkrom) elSetAkrom.value = pcts.akrom;
+  if (elSetAkrom) elSetAkrom.value = formatPct(pcts.akrom);
   const elSetTio = document.getElementById('setting-share-tio');
-  if (elSetTio) elSetTio.value = pcts.tio;
+  if (elSetTio) elSetTio.value = formatPct(pcts.tio);
   const elSetReinvest = document.getElementById('setting-share-reinvest');
-  if (elSetReinvest) elSetReinvest.value = pcts.reinvest;
+  if (elSetReinvest) elSetReinvest.value = formatPct(pcts.reinvest);
 
   const total = pcts.romie + pcts.akrom + pcts.tio + pcts.reinvest;
   const hintEl = document.getElementById('setting-share-total-hint');
   if (hintEl) {
-    hintEl.textContent = `Total Porsi: ${total.toFixed(1).replace(/\.0$/, '')}% ${Math.abs(total - 100) < 0.01 ? '(Pas 100%)' : '(Perlu disesuaikan agar 100%)'}`;
-    hintEl.style.color = Math.abs(total - 100) < 0.01 ? '#047857' : '#b45309';
+    hintEl.textContent = `Total Porsi: ${formatPct(total)}% ${Math.abs(total - 100) < 0.05 ? '(Pas 100%)' : '(Perlu disesuaikan agar 100%)'}`;
+    hintEl.style.color = Math.abs(total - 100) < 0.05 ? '#047857' : '#b45309';
   }
 }
+
+function updateSettingShareTotalHint() {
+  const r = parseFloat(document.getElementById('setting-share-romie')?.value) || 0;
+  const a = parseFloat(document.getElementById('setting-share-akrom')?.value) || 0;
+  const t = parseFloat(document.getElementById('setting-share-tio')?.value) || 0;
+  const re = parseFloat(document.getElementById('setting-share-reinvest')?.value) || 0;
+  const total = r + a + t + re;
+  const hintEl = document.getElementById('setting-share-total-hint');
+  if (hintEl) {
+    hintEl.textContent = `Total Porsi: ${formatPct(total)}% ${Math.abs(total - 100) < 0.05 ? '(Pas 100%)' : '(Perlu disesuaikan agar 100%)'}`;
+    hintEl.style.color = Math.abs(total - 100) < 0.05 ? '#047857' : '#b45309';
+  }
+}
+window.updateSettingShareTotalHint = updateSettingShareTotalHint;
 
 function saveProfitShareSettingsFromView() {
   const r = parseFloat(document.getElementById('setting-share-romie')?.value) || 0;
