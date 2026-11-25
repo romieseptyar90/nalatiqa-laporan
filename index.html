@@ -1490,9 +1490,13 @@
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;" class="no-print">
             <div style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
               <span>📊</span>
-              <span>Laporan laba rugi resmi siap diunduh ke <strong>Excel (.xlsx)</strong> atau <strong>CSV</strong>.</span>
+              <span>Laporan laba rugi resmi siap diunduh ke <strong>PDF (.pdf)</strong>, <strong>Excel (.xlsx)</strong>, atau <strong>CSV</strong>.</span>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn btn-danger" onclick="downloadPnLPDF()" style="background: #e11d48; border-color: #be123c; color: white; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h6"/><path d="M9 11h6"/><path d="M9 19h4"/></svg>
+                Download PDF (.pdf)
+              </button>
               <button class="btn btn-success" onclick="downloadPnLExcel()" style="background: #10b981; border-color: #059669; color: white; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                 Download Excel (.xlsx)
@@ -2291,7 +2295,9 @@
 
   <!-- SheetJS Library for 100% reliable Excel (.xlsx & .xls) reading -->
   <script src="xlsx.full.min.js?v=20261119_01"></script>
+  <!-- html2pdf Library for Direct PDF Export from HTML -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <!-- Core App Logic -->
-  <script src="app.js?v=20261125_01"></script>
+  <script src="app.js?v=20261125_02"></script>
 </body>
 </html>

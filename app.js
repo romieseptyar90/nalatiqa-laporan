@@ -5639,6 +5639,235 @@ function downloadPnLCSV() {
   URL.revokeObjectURL(url);
 }
 
+// =========================================================================
+// P&L PDF EXPORT (DIRECT .PDF DOWNLOAD)
+// =========================================================================
+
+function downloadPnLPDF() {
+  const safeStore = currentStoreFilter === 'all' ? 'Konsolidasi' : currentStoreFilter;
+  const currentDateStr = new Date().toISOString().split('T')[0];
+  const filename = `Laporan_Laba_Rugi_${safeStore}_${currentDateStr}.pdf`;
+
+  // Option 1: html2pdf (if CDN loaded)
+  if (typeof html2pdf !== 'undefined') {
+    const el = document.querySelector('.pnl-container');
+    if (el) {
+      showToast('Sedang membuat file PDF...', 'info');
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(el).save()
+        .then(() => {
+          showToast('File PDF Laporan Laba Rugi berhasil diunduh!', 'success');
+        })
+        .catch(err => {
+          console.warn('html2pdf fallback to vector PDF:', err);
+          generateVectorPnLPDF(filename);
+        });
+      return;
+    }
+  }
+
+  // Option 2: Zero-dependency pure vector PDF generator (crisp, 100% offline & fast)
+  generateVectorPnLPDF(filename);
+}
+
+function generateVectorPnLPDF(filename) {
+  try {
+    const metrics = computeMetrics();
+
+    let storeTitle = 'PT NALATIQA GROUP (KONSOLIDASI 5 TOKO)';
+    let storeSubtitle = 'SHOPEE, TIKTOK SHOP & LAZADA SELLER';
+    if (currentStoreFilter !== 'all') {
+      const storeMeta = getStoreMeta(currentStoreFilter);
+      storeTitle = `${storeMeta.name.toUpperCase()} (SHOPEE, TIKTOK & LAZADA)`;
+      storeSubtitle = `Laporan Keuangan Toko: ${storeMeta.name}`;
+    }
+
+    const periodTextMap = {
+      today: 'Hari Ini',
+      '7days': '7 Hari Terakhir',
+      month: 'Bulan Ini',
+      lastmonth: 'Bulan Lalu',
+      all: 'Semua Periode',
+      custom: (customStartDate && customEndDate) 
+        ? `Periode: ${formatDateIndo(customStartDate)} s/d ${formatDateIndo(customEndDate)}`
+        : (customStartDate ? `Mulai ${formatDateIndo(customStartDate)}` : (customEndDate ? `Hingga ${formatDateIndo(customEndDate)}` : 'Periode Kustom'))
+    };
+    const periodText = periodTextMap[dateFilter] || 'Semua Periode';
+    const currentDateStr = new Date().toISOString().split('T')[0];
+    const dateFormatted = formatDateIndo(currentDateStr);
+
+    const isSettlement = profitSharingBasis === 'settlement';
+    const rawBase = isSettlement ? Number(metrics.netSettlement || 0) : Number(metrics.netProfit || 0);
+    const pnlBase = Math.max(0, Math.round(rawBase));
+    const pnlQuarter = Math.round(pnlBase / 4);
+    const pnlReinvest = Math.max(0, pnlBase - (pnlQuarter * 3));
+    const totalOpexAndAds = (metrics.totalAdsSpend || 0) + (metrics.totalMetaAds || 0) + (metrics.totalOpex || 0);
+
+    function formatPdfRp(num) {
+      if (isNaN(num) || num === null || num === undefined) num = 0;
+      const rounded = Math.round(num);
+      const parts = Math.abs(rounded).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      return (rounded < 0 ? '-Rp ' : 'Rp ') + parts;
+    }
+
+    function sanitizePdfText(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/[–—]/g, '-')
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/\\/g, '\\\\')
+        .replace(/\(/g, '\\(')
+        .replace(/\)/g, '\\)')
+        .replace(/[^\x20-\x7E]/g, ' ');
+    }
+
+    const rows = [
+      { type: 'header', title: 'A. PENDAPATAN USAHA (MARKETPLACE REVENUE)', val: '' },
+      { type: 'item', title: '  Penjualan Kotor Shopee', val: formatPdfRp(metrics.shopeeGross || 0) },
+      { type: 'item', title: '  Penjualan Kotor TikTok Shop', val: formatPdfRp(metrics.tiktokGross || 0) },
+      { type: 'item', title: '  Penjualan Kotor Lazada', val: formatPdfRp(metrics.lazadaGross || 0) },
+      { type: 'subtotal', title: 'Total Penjualan Kotor (Gross GMV)', val: formatPdfRp(metrics.grossSales || 0) },
+      
+      { type: 'header', title: 'B. POTONGAN MARKETPLACE (PLATFORM DEDUCTIONS)', val: '' },
+      { type: 'item', title: '  Biaya Administrasi, Layanan Gratis Ongkir & Komisi', val: '(' + formatPdfRp(metrics.totalDeductions || 0) + ')' },
+      { type: 'subtotal', title: 'PENDAPATAN BERSIH / PENCAIRAN (NET REVENUE)', val: formatPdfRp(metrics.netSettlement || 0) },
+      
+      { type: 'header', title: 'C. HARGA POKOK PENJUALAN (HPP)', val: '' },
+      { type: 'item', title: '  Modal Belanja Barang (HPP Belanja / Kulakan)', val: '(' + formatPdfRp(metrics.hppTotal || 0) + ')' },
+      { type: 'subtotal', title: 'LABA KOTOR (GROSS PROFIT)', val: formatPdfRp(metrics.grossProfit || 0) },
+      
+      { type: 'header', title: 'D. BEBAN OPERASIONAL & PEMASARAN (OPEX)', val: '' },
+      { type: 'item', title: '  Biaya Iklan Marketplace (Shopee & TikTok Ads)', val: '(' + formatPdfRp(metrics.totalAdsSpend || 0) + ')' },
+      { type: 'item', title: '  Biaya Iklan Meta (Facebook & Instagram Ads)', val: '(' + formatPdfRp(metrics.totalMetaAds || 0) + ')' },
+      { type: 'item', title: '  Bahan Packing & Beban Operasional Toko', val: '(' + formatPdfRp(metrics.totalOpex || 0) + ')' },
+      { type: 'subtotal', title: 'Total Beban Operasional & Iklan', val: '(' + formatPdfRp(totalOpexAndAds || 0) + ')' },
+      
+      { type: 'grand', title: 'LABA BERSIH USAHA (NET PROFIT)', val: formatPdfRp(metrics.netProfit || 0) },
+      
+      { type: 'header', title: 'ALOKASI & BAGI HASIL DARI LABA BERSIH (MASING-MASING 25%)', val: '' },
+      { type: 'share', title: '  1. Hak Penghasilan Romie (25% - Dicairkan)', val: formatPdfRp(pnlQuarter) },
+      { type: 'share', title: '  2. Hak Penghasilan Akrom (25% - Dicairkan)', val: formatPdfRp(pnlQuarter) },
+      { type: 'share', title: '  3. Hak Penghasilan Tio (25% - Dicairkan)', val: formatPdfRp(pnlQuarter) },
+      { type: 'share', title: '  4. Masuk ke Laba Diputar (25% - Modal Berputar)', val: formatPdfRp(pnlReinvest) }
+    ];
+
+    const ops = [];
+    // Card background
+    ops.push('0.98 0.98 0.99 rg');
+    ops.push('30 25 535.28 791.89 re');
+    ops.push('f');
+    ops.push('0.85 0.88 0.92 RG');
+    ops.push('1 w');
+    ops.push('30 25 535.28 791.89 re');
+    ops.push('S');
+
+    // Navy blue header box
+    ops.push('0.08 0.16 0.32 rg');
+    ops.push('30 745 535.28 71.89 re');
+    ops.push('f');
+
+    // Header Texts
+    ops.push('BT\n/F2 13 Tf\n1 1 1 rg\n45 788 Td\n(' + sanitizePdfText(storeTitle) + ') Tj\nET');
+    ops.push('BT\n/F2 10.5 Tf\n0.85 0.92 1 rg\n45 770 Td\n(LAPORAN LABA RUGI - INCOME STATEMENT) Tj\nET');
+    ops.push('BT\n/F1 8 Tf\n0.75 0.82 0.95 rg\n45 754 Td\n(' + sanitizePdfText('Periode: ' + periodText + ' | Dicetak: ' + dateFormatted) + ') Tj\nET');
+
+    let y = 720;
+    for (const row of rows) {
+      const valStr = row.val || '';
+      const estWidth = valStr.length * 5.4;
+      const valX = (550 - estWidth).toFixed(1);
+
+      if (row.type === 'header') {
+        ops.push('0.93 0.95 0.98 rg');
+        ops.push('30 ' + (y - 3) + ' 535.28 17 re');
+        ops.push('f');
+        ops.push('BT\n/F2 8.5 Tf\n0.12 0.22 0.42 rg\n42 ' + y + ' Td\n(' + sanitizePdfText(row.title) + ') Tj\nET');
+        y -= 17;
+      } else if (row.type === 'grand') {
+        ops.push('0.05 0.58 0.41 rg');
+        ops.push('30 ' + (y - 4) + ' 535.28 22 re');
+        ops.push('f');
+        ops.push('BT\n/F2 10 Tf\n1 1 1 rg\n42 ' + (y + 2) + ' Td\n(' + sanitizePdfText(row.title) + ') Tj\nET');
+        ops.push('BT\n/F2 10 Tf\n1 1 1 rg\n' + valX + ' ' + (y + 2) + ' Td\n(' + sanitizePdfText(valStr) + ') Tj\nET');
+        y -= 23;
+      } else if (row.type === 'subtotal') {
+        ops.push('0.96 0.97 0.99 rg');
+        ops.push('30 ' + (y - 3) + ' 535.28 17 re');
+        ops.push('f');
+        ops.push('0.85 0.88 0.92 RG\n0.5 w');
+        ops.push('30 ' + (y - 3) + ' 535.28 0.5 re\nS');
+        ops.push('BT\n/F2 8.5 Tf\n0.1 0.15 0.25 rg\n42 ' + y + ' Td\n(' + sanitizePdfText(row.title) + ') Tj\nET');
+        ops.push('BT\n/F2 8.5 Tf\n0.1 0.15 0.25 rg\n' + valX + ' ' + y + ' Td\n(' + sanitizePdfText(valStr) + ') Tj\nET');
+        y -= 18;
+      } else if (row.type === 'share') {
+        ops.push('BT\n/F1 8.5 Tf\n0.04 0.45 0.25 rg\n42 ' + y + ' Td\n(' + sanitizePdfText(row.title) + ') Tj\nET');
+        ops.push('BT\n/F2 8.5 Tf\n0.04 0.45 0.25 rg\n' + valX + ' ' + y + ' Td\n(' + sanitizePdfText(valStr) + ') Tj\nET');
+        y -= 16;
+      } else {
+        ops.push('BT\n/F1 8.5 Tf\n0.25 0.3 0.35 rg\n42 ' + y + ' Td\n(' + sanitizePdfText(row.title) + ') Tj\nET');
+        ops.push('BT\n/F1 8.5 Tf\n0.25 0.3 0.35 rg\n' + valX + ' ' + y + ' Td\n(' + sanitizePdfText(valStr) + ') Tj\nET');
+        y -= 16;
+      }
+    }
+
+    // Footer note
+    ops.push('0.85 0.88 0.92 RG\n0.5 w\n30 45 535.28 0.5 re\nS');
+    ops.push('BT\n/F1 7.5 Tf\n0.55 0.6 0.65 rg\n42 34 Td\n(' + sanitizePdfText('Dokumen Resmi Keuangan Multi-Marketplace PT Nalatiqa Group - Digenerate otomatis oleh BukuToko') + ') Tj\nET');
+
+    const streamStr = ops.join('\n');
+    const byteCount = new TextEncoder().encode(streamStr).length;
+
+    const pdfObjects = [
+      '<< /Type /Catalog /Pages 2 0 R >>',
+      '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>',
+      '<< /Length ' + byteCount + ' >>\nstream\n' + streamStr + '\nendstream',
+      '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
+      '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>'
+    ];
+
+    const pdfHeader = '%PDF-1.4\n';
+    let body = '';
+    const offsets = [];
+    let currentOffset = new TextEncoder().encode(pdfHeader).length;
+
+    for (let i = 0; i < pdfObjects.length; i++) {
+      const objStr = (i + 1) + ' 0 obj\n' + pdfObjects[i] + '\nendobj\n';
+      offsets.push(currentOffset);
+      body += objStr;
+      currentOffset += new TextEncoder().encode(objStr).length;
+    }
+
+    let xref = 'xref\n0 ' + (pdfObjects.length + 1) + '\n0000000000 65535 f \n';
+    for (const off of offsets) {
+      xref += String(off).padStart(10, '0') + ' 00000 n \n';
+    }
+    const trailer = 'trailer\n<< /Size ' + (pdfObjects.length + 1) + ' /Root 1 0 R >>\nstartxref\n' + currentOffset + '\n%%EOF\n';
+
+    const fullPdf = pdfHeader + body + xref + trailer;
+    const blob = new Blob([fullPdf], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('File PDF Laporan Laba Rugi berhasil diunduh!', 'success');
+  } catch (err) {
+    console.error('Failed to generate vector PDF:', err);
+    alert('Terjadi kendala saat membuat PDF. Silakan gunakan tombol "Cetak / Simpan PDF" di samping.');
+  }
+}
+
 // Settings View
 function renderSettings() {
   const store = db.getStore();
