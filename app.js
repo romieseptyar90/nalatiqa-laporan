@@ -1249,7 +1249,7 @@ function renderDashboard() {
           <span>🏢 Modal Kas Rp 29.000.000 Terpusat di Kas Perusahaan (Bukan Modal Toko Cabang)</span>
         </div>
         <div>Pencairan Penjualan: <strong style="color: #047857;">${formatRupiah(metrics.netSettlement)}</strong></div>
-        <div>Laba Diputar (${pcts.reinvest}%): <strong style="color: #059669;">${formatRupiah(displayProfitReinvest)}</strong></div>
+        <div>Laba Diputar (${formatPct(pcts.reinvest)}%): <strong style="color: #059669;">${formatRupiah(displayProfitReinvest)}</strong></div>
         <button class="btn btn-sm btn-outline-primary" onclick="setStoreFilter('all')" style="padding: 4px 12px; font-weight: 600; background: #ffffff;">
           Lihat Kas Perusahaan &rarr;
         </button>
@@ -1401,6 +1401,10 @@ function handleSharePercentageChange(changedKey, value) {
   if (pnlView && pnlView.style.display !== 'none') {
     renderPnL();
   }
+  const capView = document.getElementById('view-capital');
+  if (capView && capView.style.display !== 'none') {
+    renderCapitalView();
+  }
   renderDashboard();
 }
 window.handleSharePercentageChange = handleSharePercentageChange;
@@ -1420,6 +1424,10 @@ function applyProfitSharePreset(r, a, t, re) {
   const pnlView = document.getElementById('view-pnl');
   if (pnlView && pnlView.style.display !== 'none') {
     renderPnL();
+  }
+  const capView = document.getElementById('view-capital');
+  if (capView && capView.style.display !== 'none') {
+    renderCapitalView();
   }
   renderDashboard();
 }
@@ -1459,6 +1467,11 @@ function setProfitSharingBasis(basis) {
   if (pnlView && pnlView.style.display !== 'none') {
     renderPnL();
   }
+  const capView = document.getElementById('view-capital');
+  if (capView && capView.style.display !== 'none') {
+    renderCapitalView();
+  }
+  renderDashboard();
 }
 window.setProfitSharingBasis = setProfitSharingBasis;
 
@@ -6142,6 +6155,7 @@ function saveProfitShareSettingsFromView() {
   renderSettings();
   renderProfitSharingWidget();
   renderPnL();
+  renderCapitalView();
   renderDashboard();
 }
 window.saveProfitShareSettingsFromView = saveProfitShareSettingsFromView;
@@ -7280,19 +7294,27 @@ function renderCapitalView() {
     elDebtRem.style.color = metrics.remainingDebt > 0 ? '#b91c1c' : '#059669';
   }
 
-  // Compute 25% Reinvest Total from active profit sharing allocation
+  // Compute Reinvest Total from active profit sharing allocation
+  const pcts = getProfitSharePercentages();
   const isSettlement = profitSharingBasis === 'settlement';
   const rawBase = isSettlement ? Number(metrics.netSettlement || 0) : Number(metrics.netProfit || 0);
   const baseAmount = Math.max(0, Math.round(rawBase));
-  const quarterAmount = Math.round(baseAmount / 4);
-  const withdrawnTotal = quarterAmount * 3;
-  const autoReinvest25 = Math.max(0, baseAmount - withdrawnTotal);
+  const shares = calculateProfitShares(baseAmount, pcts);
   const displayCapitalProfit = (metrics.totalProfitReinvest && metrics.totalProfitReinvest > 0)
     ? metrics.totalProfitReinvest
-    : autoReinvest25;
+    : shares.reinvestAmount;
 
   const elProfit = document.getElementById('capital-profit-display');
   if (elProfit) elProfit.textContent = formatRupiah(displayCapitalProfit);
+
+  const elProfitSub = document.getElementById('capital-profit-subtext');
+  if (elProfitSub) {
+    if (pcts.reinvest <= 0.001) {
+      elProfitSub.textContent = 'Alokasi laba diputar: 0% (Hak bagi hasil dicairkan 100% ke mitra)';
+    } else {
+      elProfitSub.textContent = `Alokasi laba diputar: ${formatPct(pcts.reinvest)}% dari keuntungan usaha`;
+    }
+  }
 
   const elOwner = document.getElementById('capital-owner-display');
   if (elOwner) elOwner.textContent = formatRupiah(metrics.totalOwnerCapital + metrics.totalInvestorCapital);
