@@ -1487,11 +1487,25 @@
              VIEW 7: LAPORAN LABA RUGI (P&L)
              ========================================== -->
         <div id="view-pnl" class="tab-view" style="display: none;">
-          <div style="text-align: right; margin-bottom: 16px;" class="no-print">
-            <button class="btn btn-primary" onclick="window.print()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-              Cetak / Simpan PDF
-            </button>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;" class="no-print">
+            <div style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+              <span>📊</span>
+              <span>Laporan laba rugi resmi siap diunduh ke <strong>Excel (.xlsx)</strong> atau <strong>CSV</strong>.</span>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn btn-success" onclick="downloadPnLExcel()" style="background: #10b981; border-color: #059669; color: white; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                Download Excel (.xlsx)
+              </button>
+              <button class="btn btn-outline" onclick="downloadPnLCSV()" style="background: white; border: 1px solid #cbd5e1; color: #334155; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+                Download CSV
+              </button>
+              <button class="btn btn-primary" onclick="window.print()" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                Cetak / Simpan PDF
+              </button>
+            </div>
           </div>
 
           <div class="pnl-container">

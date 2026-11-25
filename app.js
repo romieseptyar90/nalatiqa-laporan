@@ -5465,6 +5465,180 @@ function renderPnL() {
   if (elPnlReinvest) elPnlReinvest.textContent = formatRupiah(pnlReinvest);
 }
 
+// =========================================================================
+// P&L EXPORT HANDLERS (EXCEL & CSV DOWNLOAD)
+// =========================================================================
+
+function downloadPnLExcel() {
+  const metrics = computeMetrics();
+  
+  // Store Title
+  let storeTitle = 'PT NALATIQA GROUP (KONSOLIDASI 5 TOKO)';
+  let storeSubtitle = 'SHOPEE, TIKTOK SHOP & LAZADA SELLER';
+  if (currentStoreFilter !== 'all') {
+    const storeMeta = getStoreMeta(currentStoreFilter);
+    storeTitle = storeMeta.name.toUpperCase();
+    storeSubtitle = `Laporan Keuangan Toko: ${storeMeta.name}`;
+  }
+
+  // Period Text
+  const periodTextMap = {
+    today: 'Hari Ini',
+    '7days': '7 Hari Terakhir',
+    month: 'Bulan Ini',
+    lastmonth: 'Bulan Lalu',
+    all: 'Semua Periode',
+    custom: (customStartDate && customEndDate) 
+      ? `Periode: ${formatDateIndo(customStartDate)} s/d ${formatDateIndo(customEndDate)}`
+      : (customStartDate ? `Mulai ${formatDateIndo(customStartDate)}` : (customEndDate ? `Hingga ${formatDateIndo(customEndDate)}` : 'Periode Kustom'))
+  };
+  const periodText = periodTextMap[dateFilter] || 'Semua Periode';
+  const currentDateStr = new Date().toISOString().split('T')[0];
+
+  // Profit sharing
+  const isSettlement = profitSharingBasis === 'settlement';
+  const rawBase = isSettlement ? Number(metrics.netSettlement || 0) : Number(metrics.netProfit || 0);
+  const pnlBase = Math.max(0, Math.round(rawBase));
+  const pnlQuarter = Math.round(pnlBase / 4);
+  const pnlReinvest = Math.max(0, pnlBase - (pnlQuarter * 3));
+  const totalOpexAndAds = (metrics.totalAdsSpend || 0) + (metrics.totalMetaAds || 0) + (metrics.totalOpex || 0);
+
+  // Data matrix for Excel
+  const wsData = [
+    [storeTitle, '', ''],
+    ['LAPORAN LABA RUGI (INCOME STATEMENT)', '', ''],
+    [storeSubtitle, '', ''],
+    [`Periode: ${periodText}`, '', ''],
+    [`Tanggal Unduh: ${formatDateIndo(currentDateStr)}`, '', ''],
+    ['', '', ''],
+    ['KOMPONEN KEUANGAN', 'NOMINAL (RP)', 'KETERANGAN'],
+    ['A. PENDAPATAN USAHA (MARKETPLACE REVENUE)', '', ''],
+    ['   - Penjualan Kotor Shopee', Number(metrics.shopeeGross || 0), 'Gross GMV Shopee'],
+    ['   - Penjualan Kotor TikTok Shop', Number(metrics.tiktokGross || 0), 'Gross GMV TikTok Shop'],
+    ['   - Penjualan Kotor Lazada', Number(metrics.lazadaGross || 0), 'Gross GMV Lazada'],
+    ['TOTAL PENJUALAN KOTOR (GROSS GMV)', Number(metrics.grossSales || 0), 'Subtotal Seluruh Penjualan'],
+    ['', '', ''],
+    ['B. POTONGAN MARKETPLACE (PLATFORM DEDUCTIONS)', '', ''],
+    ['   - Biaya Administrasi, Layanan Gratis Ongkir & Komisi', -Number(metrics.totalDeductions || 0), 'Potongan Fee Marketplace'],
+    ['PENDAPATAN BERSIH / PENCAIRAN (NET REVENUE)', Number(metrics.netSettlement || 0), 'Dana Cair dari Marketplace'],
+    ['', '', ''],
+    ['C. HARGA POKOK PENJUALAN (HPP)', '', ''],
+    ['   - Modal Belanja Barang (HPP Belanja / Kulakan)', -Number(metrics.hppTotal || 0), 'Kulakan / Modal Produk Terjual'],
+    ['LABA KOTOR (GROSS PROFIT)', Number(metrics.grossProfit || 0), 'Pendapatan Bersih - HPP'],
+    ['', '', ''],
+    ['D. BEBAN OPERASIONAL & PEMASARAN (OPEX)', '', ''],
+    ['   - Biaya Iklan Marketplace (Shopee & TikTok Ads)', -Number(metrics.totalAdsSpend || 0), 'Iklan Shopee Ads & GMV Max TikTok'],
+    ['   - Biaya Iklan Meta (Facebook & Instagram Ads)', -Number(metrics.totalMetaAds || 0), 'Iklan Berbayar Meta CPAS/FB/IG'],
+    ['   - Bahan Packing & Beban Operasional Toko', -Number(metrics.totalOpex || 0), 'Kardus, bubble wrap, gaji, sewa, dll'],
+    ['TOTAL BEBAN OPERASIONAL & IKLAN', -totalOpexAndAds, 'Total Pengeluaran Operasional'],
+    ['', '', ''],
+    ['LABA BERSIH USAHA (NET PROFIT)', Number(metrics.netProfit || 0), 'Laba Kotor - Total Beban'],
+    ['', '', ''],
+    ['ALOKASI & BAGI HASIL DARI LABA BERSIH (25% x 4)', '', ''],
+    ['   - 1. Hak Penghasilan Romie (25% - Dicairkan)', pnlQuarter, 'Bagi Hasil 25%'],
+    ['   - 2. Hak Penghasilan Akrom (25% - Dicairkan)', pnlQuarter, 'Bagi Hasil 25%'],
+    ['   - 3. Hak Penghasilan Tio (25% - Dicairkan)', pnlQuarter, 'Bagi Hasil 25%'],
+    ['   - 4. Masuk ke Laba Diputar (25% - Modal Berputar)', pnlReinvest, 'Modal Perputaran Usaha 25%'],
+  ];
+
+  if (typeof XLSX !== 'undefined' && XLSX.utils && XLSX.utils.aoa_to_sheet) {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 56 },
+      { wch: 22 },
+      { wch: 35 }
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Laporan Laba Rugi');
+    const safeStore = currentStoreFilter === 'all' ? 'Konsolidasi' : currentStoreFilter;
+    const filename = `Laporan_Laba_Rugi_${safeStore}_${currentDateStr}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  } else {
+    downloadPnLCSV();
+  }
+}
+
+function downloadPnLCSV() {
+  const metrics = computeMetrics();
+  let storeTitle = 'PT NALATIQA GROUP (KONSOLIDASI 5 TOKO)';
+  if (currentStoreFilter !== 'all') {
+    const storeMeta = getStoreMeta(currentStoreFilter);
+    storeTitle = `${storeMeta.name.toUpperCase()} (SHOPEE, TIKTOK & LAZADA)`;
+  }
+
+  const periodTextMap = {
+    today: 'Hari Ini',
+    '7days': '7 Hari Terakhir',
+    month: 'Bulan Ini',
+    lastmonth: 'Bulan Lalu',
+    all: 'Semua Periode',
+    custom: (customStartDate && customEndDate) 
+      ? `Periode: ${formatDateIndo(customStartDate)} s/d ${formatDateIndo(customEndDate)}`
+      : (customStartDate ? `Mulai ${formatDateIndo(customStartDate)}` : (customEndDate ? `Hingga ${formatDateIndo(customEndDate)}` : 'Periode Kustom'))
+  };
+  const periodText = periodTextMap[dateFilter] || 'Semua Periode';
+  const currentDateStr = new Date().toISOString().split('T')[0];
+
+  const isSettlement = profitSharingBasis === 'settlement';
+  const rawBase = isSettlement ? Number(metrics.netSettlement || 0) : Number(metrics.netProfit || 0);
+  const pnlBase = Math.max(0, Math.round(rawBase));
+  const pnlQuarter = Math.round(pnlBase / 4);
+  const pnlReinvest = Math.max(0, pnlBase - (pnlQuarter * 3));
+  const totalOpexAndAds = (metrics.totalAdsSpend || 0) + (metrics.totalMetaAds || 0) + (metrics.totalOpex || 0);
+
+  const rows = [
+    [storeTitle, ''],
+    ['LAPORAN LABA RUGI (INCOME STATEMENT)', ''],
+    [`Periode: ${periodText}`, ''],
+    [`Tanggal Unduh: ${formatDateIndo(currentDateStr)}`, ''],
+    ['', ''],
+    ['Komponen Keuangan', 'Nominal (Rp)'],
+    ['A. PENDAPATAN USAHA (MARKETPLACE REVENUE)', ''],
+    ['Penjualan Kotor Shopee', metrics.shopeeGross || 0],
+    ['Penjualan Kotor TikTok Shop', metrics.tiktokGross || 0],
+    ['Penjualan Kotor Lazada', metrics.lazadaGross || 0],
+    ['Total Penjualan Kotor (Gross GMV)', metrics.grossSales || 0],
+    ['B. POTONGAN MARKETPLACE (PLATFORM DEDUCTIONS)', ''],
+    ['Biaya Administrasi, Layanan Gratis Ongkir & Komisi', -(metrics.totalDeductions || 0)],
+    ['PENDAPATAN BERSIH / PENCAIRAN (NET REVENUE)', metrics.netSettlement || 0],
+    ['C. HARGA POKOK PENJUALAN (HPP)', ''],
+    ['Modal Belanja Barang (HPP Belanja / Kulakan)', -(metrics.hppTotal || 0)],
+    ['LABA KOTOR (GROSS PROFIT)', metrics.grossProfit || 0],
+    ['D. BEBAN OPERASIONAL & PEMASARAN (OPEX)', ''],
+    ['Biaya Iklan Marketplace (Shopee & TikTok Ads)', -(metrics.totalAdsSpend || 0)],
+    ['Biaya Iklan Meta (Facebook & Instagram Ads)', -(metrics.totalMetaAds || 0)],
+    ['Bahan Packing & Beban Operasional Toko', -(metrics.totalOpex || 0)],
+    ['Total Beban Operasional & Iklan', -totalOpexAndAds],
+    ['LABA BERSIH USAHA (NET PROFIT)', metrics.netProfit || 0],
+    ['ALOKASI & BAGI HASIL DARI LABA BERSIH (25% x 4)', ''],
+    ['Hak Penghasilan Romie (25% - Dicairkan)', pnlQuarter],
+    ['Hak Penghasilan Akrom (25% - Dicairkan)', pnlQuarter],
+    ['Hak Penghasilan Tio (25% - Dicairkan)', pnlQuarter],
+    ['Masuk ke Laba Diputar (25% - Modal Berputar)', pnlReinvest],
+  ];
+
+  const csvContent = '\uFEFF' + rows.map(r => 
+    r.map(val => {
+      const s = String(val).replace(/"/g, '""');
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s}"` : s;
+    }).join(',')
+  ).join('\r\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const safeStore = currentStoreFilter === 'all' ? 'Konsolidasi' : currentStoreFilter;
+  a.href = url;
+  a.download = `Laporan_Laba_Rugi_${safeStore}_${currentDateStr}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // Settings View
 function renderSettings() {
   const store = db.getStore();
