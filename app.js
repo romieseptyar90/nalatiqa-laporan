@@ -8013,7 +8013,7 @@ function importDatabaseFromFile(event) {
   reader.onload = function(e) {
     try {
       const parsed = JSON.parse(e.target.result);
-      if (parsed && parsed.transactions && parsed.settings) {
+      if (parsed && parsed.settings) {
         if (confirm('Apakah Anda yakin ingin memulihkan (restore) data ini? Data yang ada saat ini akan ditimpa.')) {
           db.saveData(parsed);
           alert('Data berhasil dipulihkan!');
@@ -8028,6 +8028,69 @@ function importDatabaseFromFile(event) {
   };
   reader.readAsText(file);
 }
+
+function restoreNalatiqaDataPreset() {
+  if (!confirm('Apakah Anda ingin memulihkan seluruh data modal usaha (Rp 29.000.000), biaya iklan (Rp 3.146.832), dan alokasi bagi hasil (Romie 25%, Akrom 25%, Tio 25%, Laba Diputar 0%)?')) {
+    return;
+  }
+  const store = db.getStore();
+  
+  // 1. Settings & Profit Sharing
+  if (!store.settings) store.settings = {};
+  store.settings.storeName = 'PT NALATIQA GROUP';
+  store.settings.ownerName = 'TOKO NALATIQA';
+  store.settings.profitSharePercentages = { romie: 25, akrom: 25, tio: 25, reinvest: 0 };
+
+  // 2. Capital Injections (Rp 29.000.000, Sisa Hutang Rp 20.000.000)
+  store.capitalInjections = [
+    {
+      id: 'CAP-001',
+      date: '2026-11-01',
+      category: 'pinjaman_hutang',
+      source: 'Modal Pinjaman / Hutang Usaha',
+      amount: 20000000,
+      account: 'Rekening Bank Operasional',
+      notes: 'Modal pinjaman usaha awal toko',
+      dueDate: '2027-11-01',
+      debtTerms: 'Sisa Hutang: Rp 20.000.000',
+      storeId: 'company',
+      storeAccount: 'Holding Perusahaan'
+    },
+    {
+      id: 'CAP-002',
+      date: '2026-11-01',
+      category: 'modal_pemilik',
+      source: 'Setoran Modal Pemilik & Sumber Lain',
+      amount: 9000000,
+      account: 'Rekening Bank Utama',
+      notes: 'Setoran modal pemilik & investor',
+      dueDate: '',
+      debtTerms: '',
+      storeId: 'company',
+      storeAccount: 'Holding Perusahaan'
+    }
+  ];
+
+  // 3. Ads (Biaya Iklan Rp 3.146.832 Toko Nalatiqa Nature)
+  store.ads = [
+    {
+      id: 'ADS-NATURE-001',
+      date: '2026-11-01',
+      channel: 'shopee',
+      campaignType: 'Iklan Shopee Ads Nalatiqa Nature',
+      spend: 3146832,
+      salesGross: 48982500,
+      notes: 'Biaya Iklan Shopee Toko Nalatiqa Nature Bulan November',
+      storeId: 'nature',
+      storeAccount: 'Nalatiqa Nature'
+    }
+  ];
+
+  db.saveData(store);
+  alert('BERHASIL DIPULIHKAN!\n\n1. Modal Kas Masuk: Rp 29.000.000 (Sisa Hutang Rp 20.000.000)\n2. Biaya Iklan Toko Nature: Rp 3.146.832\n3. Alokasi Bagi Hasil: Romie 25%, Akrom 25%, Tio 25%, Laba Diputar 0%\n\nSemua data modal, iklan, dan pengaturan toko Bapak telah pulih 100%!');
+  renderCurrentView();
+}
+window.restoreNalatiqaDataPreset = restoreNalatiqaDataPreset;
 
 // Modal Utility Functions
 function openModal(modalId) {
