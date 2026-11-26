@@ -183,12 +183,12 @@
             <div class="filter-group">
               <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Periode:</span>
               <div class="pill-group">
-                <button class="pill-btn filter-date-btn" data-filter="today">Hari Ini</button>
-                <button class="pill-btn filter-date-btn" data-filter="7days">7 Hari</button>
-                <button class="pill-btn filter-date-btn" data-filter="month">Bulan Ini</button>
-                <button class="pill-btn filter-date-btn" data-filter="lastmonth">Bulan Lalu</button>
-                <button class="pill-btn filter-date-btn active" data-filter="all">Semua</button>
-                <button class="pill-btn filter-date-btn" data-filter="custom" id="btn-filter-custom">Custom Tanggal</button>
+                <button class="pill-btn filter-date-btn" data-filter="today" onclick="setDateFilter('today')">Hari Ini</button>
+                <button class="pill-btn filter-date-btn" data-filter="7days" onclick="setDateFilter('7days')">7 Hari</button>
+                <button class="pill-btn filter-date-btn" data-filter="month" onclick="setDateFilter('month')">Bulan Ini</button>
+                <button class="pill-btn filter-date-btn" data-filter="lastmonth" onclick="setDateFilter('lastmonth')">Bulan Lalu</button>
+                <button class="pill-btn filter-date-btn active" data-filter="all" onclick="setDateFilter('all')">Semua</button>
+                <button class="pill-btn filter-date-btn" data-filter="custom" id="btn-filter-custom" onclick="setDateFilter('custom')">Custom Tanggal</button>
               </div>
 
               <!-- Custom Date Range Picker Container -->
@@ -206,10 +206,10 @@
             <div class="filter-group">
               <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Channel:</span>
               <div class="pill-group">
-                <button class="pill-btn filter-channel-btn active" data-channel="all">Semua Marketplace (15 Toko)</button>
-                <button class="pill-btn filter-channel-btn" data-channel="shopee">Shopee</button>
-                <button class="pill-btn filter-channel-btn" data-channel="tiktok">TikTok Shop</button>
-                <button class="pill-btn filter-channel-btn" data-channel="lazada">Lazada</button>
+                <button class="pill-btn filter-channel-btn active" data-channel="all" onclick="setChannelFilter('all')">Semua Marketplace (15 Toko)</button>
+                <button class="pill-btn filter-channel-btn" data-channel="shopee" onclick="setChannelFilter('shopee')">Shopee</button>
+                <button class="pill-btn filter-channel-btn" data-channel="tiktok" onclick="setChannelFilter('tiktok')">TikTok Shop</button>
+                <button class="pill-btn filter-channel-btn" data-channel="lazada" onclick="setChannelFilter('lazada')">Lazada</button>
               </div>
             </div>
           </div>

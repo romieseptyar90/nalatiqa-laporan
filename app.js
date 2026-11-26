@@ -601,8 +601,8 @@ const db = new DBService();
 
 // Application State
 let currentTab = 'dashboard';
-let dateFilter = 'all';
-let channelFilter = 'all';
+let dateFilter = localStorage.getItem('bukutoko_active_date_filter') || 'all';
+let channelFilter = localStorage.getItem('bukutoko_active_channel_filter') || 'all';
 let customStartDate = '';
 let customEndDate = '';
 let profitSharingBasis = 'profit'; // 'profit' (Laba Bersih Usaha - Default Rekomendasi Utama) | 'settlement' (Pencairan Penjualan Bersih)
@@ -619,9 +619,16 @@ function getFilteredRecords(records, dateField = 'date') {
   const todayStr = now.toISOString().split('T')[0];
 
   return records.filter(item => {
-    // 1. Channel Filter
-    if (channelFilter !== 'all' && item.channel && item.channel !== channelFilter) {
-      return false;
+    // 1. Channel Filter (Case-insensitive & strict for transactions)
+    if (channelFilter !== 'all') {
+      const targetCh = channelFilter.toLowerCase();
+      const itemCh = (item.channel || '').toLowerCase();
+      const isTx = item.grossSales !== undefined || item.netSettlement !== undefined || item.orderId;
+      if (isTx) {
+        if (itemCh !== targetCh) return false;
+      } else if (itemCh) {
+        if (itemCh !== targetCh) return false;
+      }
     }
 
     // 2. Store Account Filter (nature | health | storeline | nn | bud)
@@ -1163,27 +1170,56 @@ function renderDashboard() {
     if (activeBanner) {
       activeBanner.style.display = 'flex';
       const storeMeta = getStoreMeta(currentStoreFilter);
+      const chLabel = channelFilter === 'all' 
+        ? 'Semua Marketplace (Shopee, TikTok & Lazada)' 
+        : (channelFilter === 'shopee' ? 'Shopee Saja' : (channelFilter === 'tiktok' ? 'TikTok Shop Saja' : 'Lazada Saja'));
+      const dateLabel = dateFilter === 'month' ? 'Bulan Ini' : (dateFilter === 'lastmonth' ? 'Bulan Lalu' : (dateFilter === 'today' ? 'Hari Ini' : (dateFilter === '7days' ? '7 Hari Terakhir' : (dateFilter === 'custom' ? `Custom: ${customStartDate} s/d ${customEndDate}` : 'Semua Periode'))));
+
+      let channelBreakdownBadge = '';
+      if (channelFilter === 'all' && (metrics.shopeeGross > 0 || metrics.lazadaGross > 0 || metrics.tiktokGross > 0)) {
+        const parts = [];
+        if (metrics.shopeeGross > 0) parts.push(`Shopee: ${formatRupiah(metrics.shopeeGross)}`);
+        if (metrics.lazadaGross > 0) parts.push(`Lazada: ${formatRupiah(metrics.lazadaGross)}`);
+        if (metrics.tiktokGross > 0) parts.push(`TikTok: ${formatRupiah(metrics.tiktokGross)}`);
+        channelBreakdownBadge = `<div style="font-size:11px;color:#0284c7;background:#e0f2fe;border:1px solid #bae6fd;padding:2px 8px;border-radius:12px;margin-top:4px;">Gabungan: ${parts.join(' + ')}</div>`;
+      }
+
       activeBanner.innerHTML = `
         <div class="store-context-info">
           <div class="store-context-icon" style="background:${storeMeta.color}15;border:1px solid ${storeMeta.color}35;">
             ${storeMeta.icon}
           </div>
           <div>
-            <div style="font-size:16px;font-weight:800;color:var(--text-dark);display:flex;align-items:center;gap:8px;">
+            <div style="font-size:16px;font-weight:800;color:var(--text-dark);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <span>${escapeHtml(storeMeta.name)}</span>
               <span class="badge ${storeMeta.badgeClass}" style="font-size:10px;">Scope Toko Aktif</span>
             </div>
             <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
-              Menampilkan data pembukuan mandiri (Shopee, TikTok Shop & Lazada) khusus untuk akun toko <strong>${escapeHtml(storeMeta.name)}</strong>
+              Menampilkan data pembukuan mandiri untuk akun toko <strong>${escapeHtml(storeMeta.name)}</strong>
             </div>
+            <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span>Filter Aktif:</span>
+              <span class="badge badge-info" style="font-size:10.5px;">📅 ${dateLabel}</span>
+              <span class="badge ${channelFilter === 'shopee' ? 'badge-shopee' : (channelFilter === 'tiktok' ? 'badge-tiktok' : (channelFilter === 'lazada' ? 'badge-lazada' : 'badge-primary'))}" style="font-size:10.5px;">🛍️ ${chLabel}</span>
+              <span class="badge badge-neutral" style="font-size:10.5px;">📊 ${metrics.txCount} Transaksi</span>
+            </div>
+            ${channelBreakdownBadge}
           </div>
         </div>
-        <button class="btn btn-sm btn-outline-primary" onclick="setStoreFilter('all')" style="font-weight:700;background:#ffffff;box-shadow:var(--shadow-sm);">
+        <button class="btn btn-sm btn-outline-primary" onclick="setStoreFilter('all')" style="font-weight:700;background:#ffffff;box-shadow:var(--shadow-sm);align-self:flex-start;">
           🏛️ Kembali ke Konsolidasi Perusahaan (Semua Toko)
         </button>
       `;
     }
   }
+
+  // Sync pill filter active states
+  document.querySelectorAll('.filter-date-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === dateFilter);
+  });
+  document.querySelectorAll('.filter-channel-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.channel === channelFilter);
+  });
 
   document.getElementById('kpi-omset').textContent = formatRupiah(metrics.grossSales);
   const omsetSubEl = document.querySelector('.kpi-card.highlight-omset .kpi-subtext');
@@ -7975,6 +8011,7 @@ function closeModal(modalId) {
 // Date Filter Actions
 function setDateFilter(filterType) {
   dateFilter = filterType;
+  try { localStorage.setItem('bukutoko_active_date_filter', filterType); } catch(e){}
   Object.keys(paginationState).forEach(k => paginationState[k].page = 1);
   document.querySelectorAll('.filter-date-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.filter === filterType);
@@ -8016,6 +8053,7 @@ function setDateFilter(filterType) {
 
   renderCurrentView();
 }
+window.setDateFilter = setDateFilter;
 
 function applyCustomDateFilter() {
   const startInput = document.getElementById('custom-date-start');
@@ -8033,6 +8071,7 @@ function applyCustomDateFilter() {
   customStartDate = startVal;
   customEndDate = endVal;
   dateFilter = 'custom';
+  try { localStorage.setItem('bukutoko_active_date_filter', 'custom'); } catch(e){}
 
   document.querySelectorAll('.filter-date-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.filter === 'custom');
@@ -8048,12 +8087,18 @@ function applyCustomDateFilter() {
 
 function setChannelFilter(channel) {
   channelFilter = channel;
+  try { localStorage.setItem('bukutoko_active_channel_filter', channel); } catch(e){}
   Object.keys(paginationState).forEach(k => paginationState[k].page = 1);
   document.querySelectorAll('.filter-channel-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.channel === channel);
   });
   renderCurrentView();
+  if (typeof showToast === 'function') {
+    const chLabel = channel === 'all' ? 'Semua Marketplace' : (channel === 'shopee' ? 'Shopee' : (channel === 'tiktok' ? 'TikTok Shop' : 'Lazada'));
+    showToast(`Filter aktif: ${chLabel}`, 'info');
+  }
 }
+window.setChannelFilter = setChannelFilter;
 
 // Reset Database Handler
 function handleResetDatabase() {
