@@ -425,15 +425,6 @@ class DBService {
       if (stored) {
         const parsed = JSON.parse(stored);
 
-        // One-time reset per user request: bersihkan riwayat impor dan hapus semua data pesanan
-        if (!localStorage.getItem('bukutoko_cleaned_orders_v7')) {
-          parsed.transactions = [];
-          parsed.importHistory = [];
-          localStorage.setItem('bukutoko_cleaned_orders_v7', 'true');
-          this.saveData(parsed);
-          return parsed;
-        }
-
         if (!parsed.importHistory) parsed.importHistory = [];
         if (!parsed.stockPurchases) parsed.stockPurchases = [];
         if (!parsed.metaAds || parsed.metaAds.length === 0) {
