@@ -4034,15 +4034,39 @@ function parseMarketplaceCsvFile(csvContent, filename, forcedChannel = null, all
     const orderIdx = headers.findIndex(h => h === 'no. pesanan' || h.includes('no. pesanan') || h.includes('order id') || h.includes('order sn'));
     const typeIdx = headers.findIndex(h => h.includes('lihat berdasarkan'));
     const grossIdx = headers.findIndex(h => h === 'harga produk' || h.includes('harga produk') || h.includes('harga asli') || h.includes('subtotal pesanan') || h.includes('subtotal produk'));
+    const refundIdx = headers.findIndex(h => h.includes('jumlah pengembalian dana ke pembeli') || h.includes('pengembalian dana ke pembeli') || h.includes('pengembalian dana'));
     const netIdx = headers.findIndex(h => h === 'total penghasilan' || h.includes('total penghasilan') || h.includes('penghasilan'));
     const adminIdx = headers.findIndex(h => h.includes('biaya administrasi'));
-    const transIdx = headers.findIndex(h => h.includes('biaya proses pesanan') || h.includes('biaya transaksi') || h.includes('biaya pembayaran'));
-    const xtraIdx = headers.findIndex(h => h.includes('biaya gratis ongkir xtra'));
-    const promoXtraIdx = headers.findIndex(h => h.includes('biaya layanan promo xtra') || h.includes('biaya layanan'));
-    const campaignIdx = headers.findIndex(h => h.includes('biaya kampanye'));
-    const amsIdx = headers.findIndex(h => h.includes('biaya komisi ams'));
-    const voucherIdx = headers.findIndex(h => h.includes('voucher disponsor oleh penjual') || h.includes('voucher'));
-    const coinIdx = headers.findIndex(h => h.includes('cashback koin disponsori penjual'));
+    
+    // Multiple fee indices support across all variants of Shopee reports
+    const transIndices = [];
+    const serviceIndices = [];
+    const voucherIndices = [];
+    headers.forEach((h, idx) => {
+      if (h.includes('biaya proses pesanan') || h.includes('biaya transaksi') || h.includes('biaya pembayaran')) {
+        transIndices.push(idx);
+      } else if (
+        h.includes('biaya gratis ongkir xtra') || 
+        h.includes('biaya layanan promo xtra') || 
+        h.includes('biaya layanan') || 
+        h.includes('fbs fee') || 
+        h.includes('ongkos kirim pengembalian barang') || 
+        h.includes('return to seller fee')
+      ) {
+        serviceIndices.push(idx);
+      } else if (
+        h.includes('voucher disponsor oleh penjual') || 
+        h.includes('cashback koin disponsori penjual') || 
+        h.includes('voucher co-fund') || 
+        h.includes('cashback koin co-fund') || 
+        h.includes('biaya kampanye') || 
+        h.includes('biaya komisi ams') || 
+        h.includes('promo gratis ongkir dari penjual')
+      ) {
+        voucherIndices.push(idx);
+      }
+    });
+
     const dateIdx = headers.findIndex(h => h.includes('waktu pesanan dibuat') || h.includes('waktu pesanan'));
     const releaseIdx = headers.findIndex(h => 
       h.includes('tanggal dana dilepaskan') || 
@@ -4085,16 +4109,28 @@ function parseMarketplaceCsvFile(csvContent, filename, forcedChannel = null, all
       const currentCourier = courierIdx >= 0 ? cols[courierIdx].trim() : '';
 
       if (!orderMap[orderId]) {
-        let gross = grossIdx >= 0 ? Math.abs(cleanNumber(cols[grossIdx])) : 0;
-        let net = netIdx >= 0 ? Math.abs(cleanNumber(cols[netIdx])) : 0;
+        let rawGross = grossIdx >= 0 ? cleanNumber(cols[grossIdx]) : 0;
+        let refund = refundIdx >= 0 ? cleanNumber(cols[refundIdx]) : 0;
+        let gross = Math.max(0, rawGross + refund);
+        let net = netIdx >= 0 ? cleanNumber(cols[netIdx]) : 0;
         let admin = adminIdx >= 0 ? Math.abs(cleanNumber(cols[adminIdx])) : 0;
-        let trans = transIdx >= 0 ? Math.abs(cleanNumber(cols[transIdx])) : 0;
-        let xtra = xtraIdx >= 0 ? Math.abs(cleanNumber(cols[xtraIdx])) : 0;
-        let promoXtra = promoXtraIdx >= 0 ? Math.abs(cleanNumber(cols[promoXtraIdx])) : 0;
-        let camp = campaignIdx >= 0 ? Math.abs(cleanNumber(cols[campaignIdx])) : 0;
-        let ams = amsIdx >= 0 ? Math.abs(cleanNumber(cols[amsIdx])) : 0;
-        let voucher = voucherIdx >= 0 ? Math.abs(cleanNumber(cols[voucherIdx])) : 0;
-        let coin = coinIdx >= 0 ? Math.abs(cleanNumber(cols[coinIdx])) : 0;
+
+        let trans = 0;
+        transIndices.forEach(idx => { trans += Math.abs(cleanNumber(cols[idx])); });
+
+        let service = 0;
+        serviceIndices.forEach(idx => { service += Math.abs(cleanNumber(cols[idx])); });
+
+        let voucher = 0;
+        voucherIndices.forEach(idx => { voucher += Math.abs(cleanNumber(cols[idx])); });
+
+        // Ensure exact mathematical parity: gross - totalDeductions === net
+        const expectedDeductions = gross - net;
+        const currentDeductions = admin + trans + service + voucher;
+        const diff = expectedDeductions - currentDeductions;
+        if (diff !== 0) {
+          service += diff; // Capture return shipping, adjustments or rounding
+        }
 
         let date = dateIdx >= 0 && cols[dateIdx] ? parseShopeeDate(cols[dateIdx]) : new Date().toISOString().split('T')[0];
         let releaseDate = releaseIdx >= 0 && cols[releaseIdx] ? parseShopeeDate(cols[releaseIdx]) : date;
@@ -4123,9 +4159,9 @@ function parseMarketplaceCsvFile(csvContent, filename, forcedChannel = null, all
           qty: 1,
           grossSales: gross,
           adminFee: admin,
-          serviceFee: xtra + promoXtra,
+          serviceFee: service,
           transactionFee: trans,
-          voucherFee: voucher + coin + camp + ams,
+          voucherFee: voucher,
           netSettlement: net,
           hppTotal: matchedHpp,
           status: 'settled',
@@ -4138,24 +4174,30 @@ function parseMarketplaceCsvFile(csvContent, filename, forcedChannel = null, all
         const existing = orderMap[orderId];
 
         // If financial info was missing in previous row (e.g. Sku row came first)
-        let gross = grossIdx >= 0 ? Math.abs(cleanNumber(cols[grossIdx])) : 0;
-        let net = netIdx >= 0 ? Math.abs(cleanNumber(cols[netIdx])) : 0;
-        let admin = adminIdx >= 0 ? Math.abs(cleanNumber(cols[adminIdx])) : 0;
-        let trans = transIdx >= 0 ? Math.abs(cleanNumber(cols[transIdx])) : 0;
-        let xtra = xtraIdx >= 0 ? Math.abs(cleanNumber(cols[xtraIdx])) : 0;
-        let promoXtra = promoXtraIdx >= 0 ? Math.abs(cleanNumber(cols[promoXtraIdx])) : 0;
-        let camp = campaignIdx >= 0 ? Math.abs(cleanNumber(cols[campaignIdx])) : 0;
-        let ams = amsIdx >= 0 ? Math.abs(cleanNumber(cols[amsIdx])) : 0;
-        let voucher = voucherIdx >= 0 ? Math.abs(cleanNumber(cols[voucherIdx])) : 0;
-        let coin = coinIdx >= 0 ? Math.abs(cleanNumber(cols[coinIdx])) : 0;
+        let rawGross = grossIdx >= 0 ? cleanNumber(cols[grossIdx]) : 0;
+        let refund = refundIdx >= 0 ? cleanNumber(cols[refundIdx]) : 0;
+        let gross = Math.max(0, rawGross + refund);
+        let net = netIdx >= 0 ? cleanNumber(cols[netIdx]) : 0;
 
-        if (existing.netSettlement === 0 && net > 0) {
+        if (existing.netSettlement === 0 && net !== 0) {
+          let admin = adminIdx >= 0 ? Math.abs(cleanNumber(cols[adminIdx])) : 0;
+          let trans = 0;
+          transIndices.forEach(idx => { trans += Math.abs(cleanNumber(cols[idx])); });
+          let service = 0;
+          serviceIndices.forEach(idx => { service += Math.abs(cleanNumber(cols[idx])); });
+          let voucher = 0;
+          voucherIndices.forEach(idx => { voucher += Math.abs(cleanNumber(cols[idx])); });
+          const expectedDeductions = gross - net;
+          const currentDeductions = admin + trans + service + voucher;
+          const diff = expectedDeductions - currentDeductions;
+          if (diff !== 0) service += diff;
+
           existing.grossSales = gross;
           existing.netSettlement = net;
           existing.adminFee = admin;
-          existing.serviceFee = xtra + promoXtra;
+          existing.serviceFee = service;
           existing.transactionFee = trans;
-          existing.voucherFee = voucher + coin + camp + ams;
+          existing.voucherFee = voucher;
           if (dateIdx >= 0 && cols[dateIdx]) existing.date = parseShopeeDate(cols[dateIdx]);
           if (releaseIdx >= 0 && cols[releaseIdx]) existing.releaseDate = parseShopeeDate(cols[releaseIdx]);
         }
