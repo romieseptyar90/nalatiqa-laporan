@@ -107,6 +107,16 @@ const formatDateIndo = (dateStr) => {
   });
 };
 
+const getLocalDateString = (d = new Date()) => {
+  if (!d) return '';
+  const dateObj = typeof d === 'string' ? new Date(d) : d;
+  if (isNaN(dateObj.getTime())) return '';
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const escapeHtml = (str) => {
   if (str === null || str === undefined) return '';
   return String(str)
@@ -607,7 +617,7 @@ let stagedHppProductMap = {};
 function getFilteredRecords(records, dateField = 'date') {
   if (!records || !Array.isArray(records)) return [];
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = getLocalDateString(now);
 
   return records.filter(item => {
     // 1. Channel Filter (Case-insensitive & strict for transactions)
@@ -651,19 +661,25 @@ function getFilteredRecords(records, dateField = 'date') {
       }
       if (dateFilter === 'today') return d === todayStr;
       if (dateFilter === '7days') {
-        const d7 = new Date(); d7.setDate(d7.getDate() - 6);
-        return d <= todayStr && d >= d7.toISOString().split('T')[0];
+        const d7 = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+        const d7Str = getLocalDateString(d7);
+        return d <= todayStr && d >= d7Str;
       }
       if (dateFilter === 'month') {
-        const mStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-        const mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const mStart = `${y}-${m}-01`;
+        const mEnd = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
         return d <= mEnd && d >= mStart;
       }
       if (dateFilter === 'lastmonth') {
-        const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-        const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
-        const lmStart = new Date(prevYear, prevMonth, 1).toISOString().split('T')[0];
-        const lmEnd = new Date(prevYear, prevMonth + 1, 0).toISOString().split('T')[0];
+        const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const y = prevMonthDate.getFullYear();
+        const m = String(prevMonthDate.getMonth() + 1).padStart(2, '0');
+        const lastDay = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+        const lmStart = `${y}-${m}-01`;
+        const lmEnd = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
         return d <= lmEnd && d >= lmStart;
       }
       if (dateFilter === 'custom') {
@@ -2849,7 +2865,7 @@ async function convertXlsxToCsv(file) {
 
 // Helper: Parse DD Mon YYYY / DD-MM-YYYY / YYYY-MM-DD to ISO date YYYY-MM-DD
 function parseLazadaDate(str) {
-  if (!str) return new Date().toISOString().split('T')[0];
+  if (!str) return getLocalDateString(new Date());
   str = String(str).trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
     return str.substring(0, 10);
@@ -2870,14 +2886,14 @@ function parseLazadaDate(str) {
   }
   const d = new Date(str);
   if (!isNaN(d.getTime())) {
-    return d.toISOString().split('T')[0];
+    return getLocalDateString(d);
   }
-  return new Date().toISOString().split('T')[0];
+  return getLocalDateString(new Date());
 }
 
 // Helper: Parse Shopee DD/MM/YYYY or YYYY-MM-DD date to ISO date YYYY-MM-DD
 function parseShopeeDate(str) {
-  if (!str) return new Date().toISOString().split('T')[0];
+  if (!str) return getLocalDateString(new Date());
   str = String(str).trim();
   const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
   if (dmyMatch) {
@@ -2895,9 +2911,9 @@ function parseShopeeDate(str) {
   }
   const d = new Date(str);
   if (!isNaN(d.getTime())) {
-    return d.toISOString().split('T')[0];
+    return getLocalDateString(d);
   }
-  return new Date().toISOString().split('T')[0];
+  return getLocalDateString(new Date());
 }
 
 // Quote-aware CSV line splitter (prevents breaking rows on newlines inside quotes)
@@ -3547,7 +3563,7 @@ function parseMarketplaceCsvFile(csvContent, filename, forcedChannel = null, all
         }
       }
 
-      let date = dateIdx >= 0 && cols[dateIdx] ? parseShopeeDate(cols[dateIdx]) : new Date().toISOString().split('T')[0];
+      let date = dateIdx >= 0 && cols[dateIdx] ? parseShopeeDate(cols[dateIdx]) : getLocalDateString(new Date());
       let releaseDate = releaseIdx >= 0 && cols[releaseIdx] ? parseShopeeDate(cols[releaseIdx]) : date;
 
       let trxType = trxTypeIdx >= 0 ? cols[trxTypeIdx].trim() : 'Pesanan';
@@ -4132,7 +4148,7 @@ function parseMarketplaceCsvFile(csvContent, filename, forcedChannel = null, all
           service += diff; // Capture return shipping, adjustments or rounding
         }
 
-        let date = dateIdx >= 0 && cols[dateIdx] ? parseShopeeDate(cols[dateIdx]) : new Date().toISOString().split('T')[0];
+        let date = dateIdx >= 0 && cols[dateIdx] ? parseShopeeDate(cols[dateIdx]) : getLocalDateString(new Date());
         let releaseDate = releaseIdx >= 0 && cols[releaseIdx] ? parseShopeeDate(cols[releaseIdx]) : date;
 
         let matchedHpp = 0;
@@ -8108,7 +8124,9 @@ function setDateFilter(filterType) {
         startInput.value = customStartDate || allDates[0];
       } else {
         const now = new Date();
-        startInput.value = customStartDate || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        startInput.value = customStartDate || `${y}-${m}-01`;
       }
       customStartDate = startInput.value;
     }
@@ -8119,7 +8137,7 @@ function setDateFilter(filterType) {
         endInput.value = customEndDate || allDates[allDates.length - 1];
       } else {
         const now = new Date();
-        endInput.value = customEndDate || now.toISOString().split('T')[0];
+        endInput.value = customEndDate || getLocalDateString(now);
       }
       customEndDate = endInput.value;
     }
