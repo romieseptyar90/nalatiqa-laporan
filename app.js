@@ -2174,11 +2174,46 @@ function clearImportHistory(confirmPrompt = true) {
 function deleteImportHistoryItem(id) {
   const store = db.getStore();
   if (!store.importHistory) return;
+  const item = store.importHistory.find(h => h.id === id);
+  if (!item) return;
+
+  const count = item.rowCount || 0;
+  const fileName = item.filename || 'file ini';
+  const ok = confirm(`Hapus file "${fileName}"?\n\nApakah Anda juga ingin MENGHAPUS SEMUA transaksi pesanan (${count} pesanan) yang berasal dari file ini dari pembukuan?\n\n• Klik [OK] untuk Hapus Riwayat BESERTA seluruh transaksinya\n• Klik [Cancel] untuk Batal`);
+  if (!ok) return;
+
+  // 1. Hapus riwayat dari list
   store.importHistory = store.importHistory.filter(h => h.id !== id);
+
+  // 2. Hapus transaksi terkait dari database pembukuan
+  if (store.transactions && store.transactions.length > 0) {
+    if (item.orderIds && Array.isArray(item.orderIds) && item.orderIds.length > 0) {
+      const orderSet = new Set(item.orderIds);
+      store.transactions = store.transactions.filter(t => !orderSet.has(t.orderId));
+    } else {
+      // Fallback untuk file yang di-import sebelum adanya orderIds
+      store.transactions = store.transactions.filter(t => {
+        if (t.importId && t.importId === id) return false;
+        if (t.importFilename && t.importFilename === item.filename) return false;
+        if (item.channel && (t.channel || '').toLowerCase() === item.channel.toLowerCase()) {
+          const tStore = (t.storeId || t.storeAccount || '').toLowerCase();
+          const targetStore = (item.storeId || item.storeAccount || '').toLowerCase();
+          if (targetStore && (tStore === targetStore || tStore.includes(targetStore) || targetStore.includes(tStore))) {
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+  }
+
   db.saveData(store);
   renderImportHistory();
-  showToast('Catatan riwayat file berhasil dihapus.', 'info');
+  renderTransactions();
+  renderCurrentView();
+  showToast(`File "${fileName}" dan seluruh transaksinya berhasil dihapus.`, 'success');
 }
+window.deleteImportHistoryItem = deleteImportHistoryItem;
 
 function clearAllTransactions(confirmPrompt = true) {
   if (confirmPrompt) {
@@ -4365,14 +4400,19 @@ function confirmCommitImport() {
 
   // Commit transactions with smart upsert (replace existing duplicate orderId, append new)
   const incomingMap = new Map();
+  const incomingOrderIds = [];
+  const importUniqueId = `IMP-${Date.now()}`;
   stagedImportTransactions.forEach(t => {
+    t.importId = importUniqueId;
+    t.importFilename = stagedImportMeta.filename;
     incomingMap.set(t.orderId, t);
+    incomingOrderIds.push(t.orderId);
   });
   const existingRetained = (store.transactions || []).filter(t => !incomingMap.has(t.orderId));
   store.transactions = [...stagedImportTransactions, ...existingRetained];
 
   const historyEntry = {
-    id: `IMP-${Date.now()}`,
+    id: importUniqueId,
     date: new Date().toISOString().split('T')[0],
     filename: stagedImportMeta.filename,
     channel: stagedImportMeta.channel,
@@ -4380,7 +4420,8 @@ function confirmCommitImport() {
     storeAccount: targetStoreMeta.name,
     rowCount: stagedImportMeta.totalRows,
     totalGross: stagedImportMeta.totalGross,
-    totalNet: stagedImportMeta.totalNet
+    totalNet: stagedImportMeta.totalNet,
+    orderIds: incomingOrderIds
   };
 
   if (!store.importHistory) store.importHistory = [];
