@@ -638,36 +638,53 @@ function getFilteredRecords(records, dateField = 'date') {
       }
     }
 
-    // 3. Date Filter
-    const itemDateStr = item[dateField];
-    if (!itemDateStr && !item.startDate) return true;
+    // 3. Date Filter: Berdasarkan permintaan user, untuk transaksi penjualan marketplace di semua toko,
+    // tanggal acuan utama adalah TANGGAL DANA MASUK / CAIR (releaseDate / settlementDate)
+    // agar data dashboard cocok 100% dengan file laporan pencairan bulanan yang di-upload
+    const inDateRange = (dStr) => {
+      if (!dStr) return false;
+      let d = String(dStr).trim().replace(/\//g, '-');
+      if (d.includes('T')) d = d.split('T')[0];
+      if (d.includes(' ')) d = d.split(' ')[0];
+      // Normalisasi jika format DD-MM-YYYY menjadi YYYY-MM-DD
+      const dmyMatch = d.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+      if (dmyMatch) {
+        d = `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
+      }
+      if (dateFilter === 'today') return d === todayStr;
+      if (dateFilter === '7days') {
+        const d7 = new Date(); d7.setDate(d7.getDate() - 6);
+        return d <= todayStr && d >= d7.toISOString().split('T')[0];
+      }
+      if (dateFilter === 'month') {
+        const mStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+        return d <= mEnd && d >= mStart;
+      }
+      if (dateFilter === 'lastmonth') {
+        const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+        const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+        const lmStart = new Date(prevYear, prevMonth, 1).toISOString().split('T')[0];
+        const lmEnd = new Date(prevYear, prevMonth + 1, 0).toISOString().split('T')[0];
+        return d <= lmEnd && d >= lmStart;
+      }
+      if (dateFilter === 'custom') {
+        const cStart = customStartDate || '0000-00-00';
+        const cEnd = customEndDate || '9999-99-99';
+        return d <= cEnd && d >= cStart;
+      }
+      return true;
+    };
 
-    let itemStart = String(item.startDate || itemDateStr).trim().replace(/\//g, '-');
-    if (itemStart.includes('T')) itemStart = itemStart.split('T')[0];
-    let itemEnd = String(item.endDate || item.startDate || itemDateStr).trim().replace(/\//g, '-');
-    if (itemEnd.includes('T')) itemEnd = itemEnd.split('T')[0];
+    if (dateFilter !== 'all') {
+      const isTransaction = item.grossSales !== undefined || item.netSettlement !== undefined || item.orderId;
+      const targetDate = isTransaction 
+        ? (item.releaseDate || item[dateField] || item.date)
+        : (item.startDate || item[dateField] || item.date);
 
-    if (dateFilter === 'today') {
-      return itemStart <= todayStr && itemEnd >= todayStr;
-    } else if (dateFilter === '7days') {
-      const d7 = new Date();
-      d7.setDate(d7.getDate() - 6);
-      const d7Str = d7.toISOString().split('T')[0];
-      return itemStart <= todayStr && itemEnd >= d7Str;
-    } else if (dateFilter === 'month') {
-      const mStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-      const mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-      return itemStart <= mEnd && itemEnd >= mStart;
-    } else if (dateFilter === 'lastmonth') {
-      const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-      const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
-      const lmStart = new Date(prevYear, prevMonth, 1).toISOString().split('T')[0];
-      const lmEnd = new Date(prevYear, prevMonth + 1, 0).toISOString().split('T')[0];
-      return itemStart <= lmEnd && itemEnd >= lmStart;
-    } else if (dateFilter === 'custom') {
-      const cStart = customStartDate || '0000-00-00';
-      const cEnd = customEndDate || '9999-99-99';
-      return itemStart <= cEnd && itemEnd >= cStart;
+      if (!inDateRange(targetDate)) {
+        return false;
+      }
     }
     return true;
   });
@@ -1605,13 +1622,14 @@ function renderTrendChart() {
 
   const dateMap = {};
   txs.forEach(t => {
-    if (!t.date) return;
-    if (!dateMap[t.date]) {
-      dateMap[t.date] = { gross: 0, net: 0, hpp: 0 };
+    const txDate = (t.releaseDate || t.date || '').replace(/\//g, '-').split('T')[0].split(' ')[0];
+    if (!txDate) return;
+    if (!dateMap[txDate]) {
+      dateMap[txDate] = { gross: 0, net: 0, hpp: 0 };
     }
-    dateMap[t.date].gross += Number(t.grossSales || 0);
-    dateMap[t.date].net += Number(t.netSettlement || 0);
-    dateMap[t.date].hpp += Number(t.hppTotal || 0);
+    dateMap[txDate].gross += Number(t.grossSales || 0);
+    dateMap[txDate].net += Number(t.netSettlement || 0);
+    dateMap[txDate].hpp += Number(t.hppTotal || 0);
   });
 
   const sortedDates = Object.keys(dateMap).sort();
@@ -1779,7 +1797,11 @@ function renderRecentTransactions() {
   if (!tbody) return;
 
   const store = db.getStore();
-  const sorted = getFilteredRecords(store.transactions || []).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+  const sorted = getFilteredRecords(store.transactions || []).sort((a, b) => {
+    const dateB = new Date(b.releaseDate || b.date);
+    const dateA = new Date(a.releaseDate || a.date);
+    return dateB - dateA;
+  }).slice(0, 5);
 
   if (sorted.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">Belum ada data transaksi</td></tr>`;
@@ -1797,9 +1819,16 @@ function renderRecentTransactions() {
       ? `<span class="badge badge-success">Sudah Cair</span>`
       : (t.status === 'pending' ? `<span class="badge badge-warning">Dalam Pengiriman</span>` : `<span class="badge badge-danger">Retur/Batal</span>`);
 
+    const effDate = t.releaseDate || t.date;
+    const hasDifferentOrderDate = t.releaseDate && t.date && t.releaseDate !== t.date;
+
     return `
       <tr>
-        <td><strong>${t.orderId}</strong><div style="font-size:11px;color:var(--text-muted);">${formatDateIndo(t.date)}</div></td>
+        <td>
+          <strong>${t.orderId}</strong>
+          <div style="font-size:11px;color:var(--success);font-weight:600;" title="Tanggal Dana Masuk / Pencairan Marketplace">💰 Cair: ${formatDateIndo(effDate)}</div>
+          ${hasDifferentOrderDate ? `<div style="font-size:10px;color:var(--text-muted);" title="Waktu Pembeli Checkout">Pesanan: ${formatDateIndo(t.date)}</div>` : ''}
+        </td>
         <td>${getStoreBadgeHtml(t.storeId)}</td>
         <td>${channelBadge}</td>
         <td><div style="max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${t.productName}">${t.productName || t.sku || '-'}</div></td>
@@ -1852,6 +1881,11 @@ function renderTransactions() {
           }
         }
       }
+      // 3. Auto-heal missing releaseDate on settled transactions
+      if (t.status === 'settled' && !t.releaseDate && t.date) {
+        t.releaseDate = t.date;
+        hasHealed = true;
+      }
     });
     if (hasHealed) {
       db.saveData(store);
@@ -1876,7 +1910,11 @@ function renderTransactions() {
     list = list.filter(t => t.status === statusVal);
   }
 
-  list.sort((a, b) => new Date(b.date) - new Date(a.date));
+  list.sort((a, b) => {
+    const dateB = new Date(b.releaseDate || b.date);
+    const dateA = new Date(a.releaseDate || a.date);
+    return dateB - dateA;
+  });
 
   const selectAllBox = document.getElementById('select-all-tx');
   if (selectAllBox) {
@@ -1906,6 +1944,8 @@ function renderTransactions() {
       : (t.status === 'pending' ? `<span class="badge badge-warning">Tertunda/Kirim</span>` : `<span class="badge badge-danger">Batal/Retur</span>`);
 
     const totalDeductions = (Number(t.adminFee || 0) + Number(t.serviceFee || 0) + Number(t.transactionFee || 0) + Number(t.voucherFee || 0));
+    const effDate = t.releaseDate || t.date;
+    const hasDifferentOrderDate = t.releaseDate && t.date && t.releaseDate !== t.date;
 
     return `
       <tr>
@@ -1914,7 +1954,8 @@ function renderTransactions() {
         </td>
         <td>
           <div style="font-weight:700;">${t.orderId}</div>
-          <div style="font-size:11px;color:var(--text-muted);">${formatDateIndo(t.date)}</div>
+          <div style="font-size:11px;color:var(--success);font-weight:600;" title="Tanggal Dana Masuk / Cair ke Rekening Toko">💰 Cair: ${formatDateIndo(effDate)}</div>
+          ${hasDifferentOrderDate ? `<div style="font-size:10px;color:var(--text-muted);" title="Waktu Pembeli Checkout Pesanan">Pesanan: ${formatDateIndo(t.date)}</div>` : ''}
         </td>
         <td>${getStoreBadgeHtml(t.storeId)}</td>
         <td>${channelBadge}</td>
@@ -2006,6 +2047,10 @@ function bulkDeleteSelectedTransactions() {
 // =========================================================================
 
 function renderImporterView() {
+  const impSelect = document.getElementById('importer-target-store');
+  if (impSelect && currentStoreFilter && currentStoreFilter !== 'all') {
+    impSelect.value = currentStoreFilter;
+  }
   renderImportHistory();
 }
 
@@ -2053,11 +2098,18 @@ function renderImportHistory() {
           ? `<span class="badge badge-lazada">Lazada</span>`
           : `<span class="badge badge-tiktok">TikTok Shop</span>`);
 
+    const storeTargetLabel = h.storeAccount 
+      ? `<div style="font-size:0.75rem; color:#0369a1; margin-top:3px; display:flex; align-items:center; gap:4px;"><span>🏢 Toko: <strong>${h.storeAccount}</strong></span></div>`
+      : '';
+
     return `
       <tr>
         <td>${formatDateIndo(h.date)}</td>
         <td>${badge}</td>
-        <td><code style="font-size: 0.82rem; padding: 2px 6px; background: var(--bg-main); border-radius: 4px;">${h.filename}</code></td>
+        <td>
+          <code style="font-size: 0.82rem; padding: 2px 6px; background: var(--bg-main); border-radius: 4px;">${h.filename}</code>
+          ${storeTargetLabel}
+        </td>
         <td style="font-weight:700;">${h.rowCount} Pesanan</td>
         <td>${formatRupiah(h.totalGross)}</td>
         <td style="color:var(--success);font-weight:700;">${formatRupiah(h.totalNet)}</td>
@@ -3325,7 +3377,16 @@ function parseMarketplaceCsvFile(csvContent, filename, forcedChannel = null, all
     const pph22Idx = headers.findIndex(h => h.includes('pph pasal 22') || h.includes('pph 22'));
     const adjAmountIdx = headers.findIndex(h => h.includes('jumlah penyesuaian') || h.includes('adjustment amount'));
     const dateIdx = headers.findIndex(h => h.includes('waktu pemesanan') || h.includes('created time') || h.includes('order creation time'));
-    const releaseIdx = headers.findIndex(h => h.includes('waktu pembayaran pesanan') || h.includes('settlement time') || h.includes('waktu pembayaran'));
+    const releaseIdx = headers.findIndex(h => 
+      h.includes('waktu pembayaran pesanan') || 
+      h.includes('settlement time') || 
+      h.includes('waktu pembayaran') || 
+      h.includes('settlement date') || 
+      h.includes('waktu penyelesaian') || 
+      h.includes('tanggal penyelesaian') || 
+      h.includes('payout time') || 
+      h.includes('payout date')
+    );
     const prodIdx = headers.findIndex(h => h.includes('detail produk terjual') || h.includes('sku'));
     const relatedOrderIdx = headers.findIndex(h => h.includes('id pesanan terkait') || h.includes('related order id'));
     const sourceIdx = headers.findIndex(h => h.includes('sumber pesanan') || h.includes('order source'));
@@ -3424,17 +3485,8 @@ function parseMarketplaceCsvFile(csvContent, filename, forcedChannel = null, all
         }
       }
 
-      let date = new Date().toISOString().split('T')[0];
-      if (dateIdx >= 0 && cols[dateIdx]) {
-        const rawDate = cols[dateIdx].replace(/\//g, '-').split(' ')[0];
-        if (rawDate.match(/^\d{4}-\d{2}-\d{2}/)) date = rawDate;
-      }
-
-      let releaseDate = date;
-      if (releaseIdx >= 0 && cols[releaseIdx]) {
-        const rawRel = cols[releaseIdx].replace(/\//g, '-').split(' ')[0];
-        if (rawRel.match(/^\d{4}-\d{2}-\d{2}/)) releaseDate = rawRel;
-      }
+      let date = dateIdx >= 0 && cols[dateIdx] ? parseShopeeDate(cols[dateIdx]) : new Date().toISOString().split('T')[0];
+      let releaseDate = releaseIdx >= 0 && cols[releaseIdx] ? parseShopeeDate(cols[releaseIdx]) : date;
 
       let trxType = trxTypeIdx >= 0 ? cols[trxTypeIdx].trim() : 'Pesanan';
       let relatedId = relatedOrderIdx >= 0 ? cols[relatedOrderIdx].trim() : '';
@@ -3611,7 +3663,13 @@ function parseMarketplaceCsvFile(csvContent, filename, forcedChannel = null, all
       const feeNameIdx = headers.findIndex(h => h === 'nama biaya' || h.includes('nama biaya') || h.includes('fee name'));
       const amountIdx = headers.findIndex(h => h.includes('jumlah (termasuk pajak)') || h === 'jumlah' || h.includes('amount'));
       const orderDateIdx = headers.findIndex(h => h.includes('tanggal pesanan dibuat') || h.includes('order creation'));
-      const releaseDateIdx = headers.findIndex(h => h.includes('tanggal dilepas') || h.includes('payout date'));
+      const releaseDateIdx = headers.findIndex(h => 
+        h.includes('tanggal dilepas') || 
+        h.includes('tanggal pelepasan') || 
+        h.includes('payout date') || 
+        h.includes('release date') || 
+        h.includes('tanggal transaksi')
+      );
       const txDateIdx = headers.findIndex(h => h.includes('tanggal transaksi') || h.includes('transaction date'));
       const prodIdx = headers.findIndex(h => h.includes('nama produk') || h.includes('item name') || h.includes('product name'));
       const sellerSkuIdx = headers.findIndex(h => h.includes('sku penjual') || h.includes('seller sku'));
@@ -3924,7 +3982,16 @@ function parseMarketplaceCsvFile(csvContent, filename, forcedChannel = null, all
     const voucherIdx = headers.findIndex(h => h.includes('voucher disponsor oleh penjual') || h.includes('voucher'));
     const coinIdx = headers.findIndex(h => h.includes('cashback koin disponsori penjual'));
     const dateIdx = headers.findIndex(h => h.includes('waktu pesanan dibuat') || h.includes('waktu pesanan'));
-    const releaseIdx = headers.findIndex(h => h.includes('tanggal dana dilepaskan') || h.includes('waktu dana dilepaskan'));
+    const releaseIdx = headers.findIndex(h => 
+      h.includes('tanggal dana dilepaskan') || 
+      h.includes('waktu dana dilepaskan') || 
+      h.includes('tanggal dana dilepas') || 
+      h.includes('waktu dana dilepas') || 
+      h.includes('dana dilepaskan') || 
+      h.includes('pelepasan dana') || 
+      h.includes('payout date') || 
+      h.includes('release date')
+    );
     const productIdx = headers.findIndex(h => h === 'nama produk' || h.includes('nama produk'));
     const productIdIdx = headers.findIndex(h => h.includes('id produk'));
     const skuIdx = headers.findIndex(h => h.includes('nomor referensi sku') || h.includes('sku'));
@@ -4937,7 +5004,7 @@ function getAdMetricsFromDashboard(ad, allTxs) {
       if (t.channel !== channel) return;
     }
 
-    const tDate = String(t.date || '').replace(/\//g, '-').split('T')[0];
+    const tDate = String(t.releaseDate || t.date || '').replace(/\//g, '-').split('T')[0].split(' ')[0];
     if (sDate && tDate < sDate) return;
     if (eDate && tDate > eDate) return;
 
@@ -6287,6 +6354,10 @@ function saveTransactionFromModal() {
     return;
   }
 
+  const existingTx = store.transactions.find(t => t.id === id);
+  const releaseDate = (existingTx && existingTx.releaseDate) ? existingTx.releaseDate : (status === 'settled' ? date : null);
+  const hppTotal = (existingTx && existingTx.hppTotal !== undefined) ? existingTx.hppTotal : 0;
+
   const newTx = {
     id,
     storeId,
@@ -6294,7 +6365,7 @@ function saveTransactionFromModal() {
     orderId,
     channel,
     date,
-    releaseDate: status === 'settled' ? date : null,
+    releaseDate,
     buyerName,
     sku,
     productName,
@@ -6305,7 +6376,7 @@ function saveTransactionFromModal() {
     transactionFee,
     voucherFee,
     netSettlement,
-    hppTotal: 0,
+    hppTotal,
     status,
     notes
   };
@@ -6577,7 +6648,7 @@ function updateAdModalPreview() {
     if (channel && channel !== 'all') {
       if (t.channel !== channel) return;
     }
-    const tDate = String(t.date || '').replace(/\//g, '-').split('T')[0];
+    const tDate = String(t.releaseDate || t.date || '').replace(/\//g, '-').split('T')[0].split(' ')[0];
     if (sDate && tDate < sDate) return;
     if (eDate && tDate > eDate) return;
 
@@ -7921,7 +7992,7 @@ function setDateFilter(filterType) {
     // Auto-prefill dates if empty
     if (startInput && !startInput.value) {
       const store = db.getStore();
-      const allDates = (store.transactions || []).map(t => (t.date || '').replace(/\//g, '-').split('T')[0]).filter(Boolean).sort();
+      const allDates = (store.transactions || []).map(t => (t.releaseDate || t.date || '').replace(/\//g, '-').split('T')[0].split(' ')[0]).filter(Boolean).sort();
       if (allDates.length > 0) {
         startInput.value = customStartDate || allDates[0];
       } else {
@@ -7932,7 +8003,7 @@ function setDateFilter(filterType) {
     }
     if (endInput && !endInput.value) {
       const store = db.getStore();
-      const allDates = (store.transactions || []).map(t => (t.date || '').replace(/\//g, '-').split('T')[0]).filter(Boolean).sort();
+      const allDates = (store.transactions || []).map(t => (t.releaseDate || t.date || '').replace(/\//g, '-').split('T')[0].split(' ')[0]).filter(Boolean).sort();
       if (allDates.length > 0) {
         endInput.value = customEndDate || allDates[allDates.length - 1];
       } else {
