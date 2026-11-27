@@ -880,6 +880,7 @@ function computeMetrics() {
   let opexPacking = 0;
   let opexRent = 0;
   let opexShipping = 0;
+  let opexTools = 0;
   let opexOther = 0;
   let opexDebt = 0;
 
