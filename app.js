@@ -876,15 +876,37 @@ function computeMetrics() {
 
   // Calculate Belanja Modal Barang (HPP Belanja) from expenses ('hpp_belanja') and legacy stock purchases
   let hppFromExpenses = 0;
-  let totalOpex = 0;
+  let opexSalary = 0;
+  let opexPacking = 0;
+  let opexRent = 0;
+  let opexShipping = 0;
+  let opexTools = 0;
+  let opexOther = 0;
+  let opexDebt = 0;
+
   expenses.forEach(e => {
     const amt = Number(e.amount || 0);
-    if (e.category === 'hpp_belanja') {
+    const cat = (e.category || '').toLowerCase();
+    if (cat === 'hpp_belanja') {
       hppFromExpenses += amt;
+    } else if (cat === 'salary') {
+      opexSalary += amt;
+    } else if (cat === 'packing') {
+      opexPacking += amt;
+    } else if (cat === 'rent') {
+      opexRent += amt;
+    } else if (cat === 'shipping') {
+      opexShipping += amt;
+    } else if (cat === 'tools') {
+      opexTools += amt;
+    } else if (cat === 'bayar_hutang' || cat === 'debt_payment' || cat === 'cicilan_hutang') {
+      opexDebt += amt;
     } else {
-      totalOpex += amt;
+      opexOther += amt;
     }
   });
+
+  const totalOpex = opexSalary + opexPacking + opexRent + opexShipping + opexTools + opexOther;
 
   let totalStockPurchases = 0;
   let totalStockQty = 0;
@@ -929,6 +951,27 @@ function computeMetrics() {
       return cStore === currentStoreFilter;
     }
   });
+
+  // Filter capital transactions within selected period for P&L and Cash Flow
+  const periodCapital = getFilteredRecords(capitalInjections, 'date');
+  let periodDebtRepaid = 0;
+  let periodPriveWithdrawn = 0;
+  let periodCapitalIn = 0;
+
+  periodCapital.forEach(c => {
+    const amt = Number(c.amount || 0);
+    if (c.category === 'bayar_hutang') {
+      periodDebtRepaid += amt;
+    } else if (c.category === 'prive_penarikan') {
+      periodPriveWithdrawn += amt;
+    } else if (c.category === 'pinjaman_hutang' || c.category === 'laba_keuntungan' || c.category === 'modal_pemilik' || c.category === 'investor_lainnya') {
+      periodCapitalIn += amt;
+    }
+  });
+
+  const totalPeriodDebtPayment = periodDebtRepaid + opexDebt;
+  const netProfitAfterDebt = netProfit - totalPeriodDebtPayment;
+  const netCashFlowAfterPrive = netProfitAfterDebt - periodPriveWithdrawn;
 
   let totalCapitalIn = 0;
   let totalDebtIn = 0;
@@ -997,6 +1040,18 @@ function computeMetrics() {
     totalMetaAds,
     allAdsTotal,
     totalOpex,
+    opexSalary,
+    opexPacking,
+    opexRent,
+    opexShipping,
+    opexTools,
+    opexOther,
+    opexDebt,
+    periodDebtRepaid: totalPeriodDebtPayment,
+    periodPriveWithdrawn,
+    periodCapitalIn,
+    netProfitAfterDebt,
+    netCashFlowAfterPrive,
     netProfit,
     netMargin,
     totalCapitalIn,
@@ -5677,10 +5732,11 @@ function renderExpensesTable() {
   const categoryNames = {
     hpp_belanja: '📦 HPP Belanja Modal',
     packing: 'Bahan Packing',
-    salary: 'Gaji & Upah',
+    salary: '👥 Gaji & Upah',
     shipping: 'Ongkir & Drop Off',
     tools: 'Peralatan & Label',
     rent: 'Sewa & Listrik',
+    bayar_hutang: '💳 Cicilan Hutang',
     other: 'Lain-lain'
   };
 
@@ -5698,6 +5754,8 @@ function renderExpensesTable() {
       catBadge = `<span class="badge" style="background:#fdf4ff;color:#86198f;font-weight:600;border:1px solid #f5d0fe;">🏷️ Alat & Label</span>`;
     } else if (e.category === 'rent') {
       catBadge = `<span class="badge" style="background:#fff7ed;color:#9a3412;font-weight:600;border:1px solid #fed7aa;">🏢 Sewa & Listrik</span>`;
+    } else if (e.category === 'bayar_hutang' || e.category === 'debt_payment') {
+      catBadge = `<span class="badge" style="background:#fff1f2;color:#be123c;font-weight:600;border:1px solid #fecdd3;">💳 Cicilan Hutang</span>`;
     } else {
       catBadge = `<span class="badge badge-neutral">${categoryNames[e.category] || e.category || 'Lain-lain'}</span>`;
     }
@@ -5846,17 +5904,68 @@ function renderPnL() {
   document.getElementById('pnl-hpp').textContent = `(${formatRupiah(metrics.hppTotal)})`;
   document.getElementById('pnl-gross-profit').textContent = formatRupiah(metrics.grossProfit);
 
-  document.getElementById('pnl-ads-expense').textContent = `(${formatRupiah(metrics.totalAdsSpend)})`;
+  document.getElementById('pnl-ads-expense').textContent = metrics.totalAdsSpend > 0 ? `(${formatRupiah(metrics.totalAdsSpend)})` : 'Rp 0';
   const pnlMeta = document.getElementById('pnl-meta-ads-expense');
-  if (pnlMeta) pnlMeta.textContent = `(${formatRupiah(metrics.totalMetaAds || 0)})`;
-  document.getElementById('pnl-opex-expense').textContent = `(${formatRupiah(metrics.totalOpex)})`;
+  if (pnlMeta) pnlMeta.textContent = (metrics.totalMetaAds || 0) > 0 ? `(${formatRupiah(metrics.totalMetaAds || 0)})` : 'Rp 0';
+
+  // Detail Beban Operasional (OPEX)
+  const elSalary = document.getElementById('pnl-salary-expense');
+  if (elSalary) elSalary.textContent = metrics.opexSalary > 0 ? `(${formatRupiah(metrics.opexSalary)})` : 'Rp 0';
+
+  const elPacking = document.getElementById('pnl-packing-expense');
+  if (elPacking) elPacking.textContent = metrics.opexPacking > 0 ? `(${formatRupiah(metrics.opexPacking)})` : 'Rp 0';
+
+  const elRent = document.getElementById('pnl-rent-expense');
+  if (elRent) elRent.textContent = metrics.opexRent > 0 ? `(${formatRupiah(metrics.opexRent)})` : 'Rp 0';
+
+  const elShipping = document.getElementById('pnl-shipping-expense');
+  if (elShipping) elShipping.textContent = metrics.opexShipping > 0 ? `(${formatRupiah(metrics.opexShipping)})` : 'Rp 0';
+
+  const elTools = document.getElementById('pnl-tools-expense');
+  if (elTools) elTools.textContent = metrics.opexTools > 0 ? `(${formatRupiah(metrics.opexTools)})` : 'Rp 0';
+
+  const elOther = document.getElementById('pnl-other-expense');
+  if (elOther) elOther.textContent = metrics.opexOther > 0 ? `(${formatRupiah(metrics.opexOther)})` : 'Rp 0';
+
+  // Fallback for legacy element if present
+  const elLegacyOpex = document.getElementById('pnl-opex-expense');
+  if (elLegacyOpex) elLegacyOpex.textContent = metrics.totalOpex > 0 ? `(${formatRupiah(metrics.totalOpex)})` : 'Rp 0';
 
   const totalOpexAndAds = (metrics.totalAdsSpend || 0) + (metrics.totalMetaAds || 0) + (metrics.totalOpex || 0);
-  document.getElementById('pnl-total-opex').textContent = `(${formatRupiah(totalOpexAndAds)})`;
+  document.getElementById('pnl-total-opex').textContent = totalOpexAndAds > 0 ? `(${formatRupiah(totalOpexAndAds)})` : 'Rp 0';
 
   const elNetProfit = document.getElementById('pnl-net-profit');
   elNetProfit.textContent = formatRupiah(metrics.netProfit);
   elNetProfit.style.color = metrics.netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
+
+  // Section E: Pembayaran Cicilan Hutang & Pengeluaran Finansial
+  const elDebtPayment = document.getElementById('pnl-debt-payment');
+  if (elDebtPayment) {
+    elDebtPayment.textContent = metrics.periodDebtRepaid > 0 ? `(${formatRupiah(metrics.periodDebtRepaid)})` : 'Rp 0';
+  }
+
+  const elDebtRem = document.getElementById('pnl-debt-remaining-info');
+  if (elDebtRem) {
+    elDebtRem.textContent = formatRupiah(metrics.remainingDebt);
+  }
+
+  const elPriveRow = document.getElementById('pnl-row-prive');
+  const elPriveVal = document.getElementById('pnl-prive-withdrawn');
+  if (elPriveRow && elPriveVal) {
+    if (metrics.periodPriveWithdrawn > 0) {
+      elPriveRow.style.display = '';
+      elPriveVal.textContent = `(${formatRupiah(metrics.periodPriveWithdrawn)})`;
+    } else {
+      elPriveRow.style.display = 'none';
+    }
+  }
+
+  const elNetCashAfterDebt = document.getElementById('pnl-net-cash-after-debt');
+  if (elNetCashAfterDebt) {
+    const cashVal = metrics.netProfitAfterDebt;
+    elNetCashAfterDebt.textContent = formatRupiah(cashVal);
+    elNetCashAfterDebt.style.color = cashVal >= 0 ? '#059669' : '#dc2626';
+  }
 
   // 4-Way Profit Sharing Allocation in P&L (Editable Percentages: Romie, Akrom, Tio, Laba Diputar)
   const pcts = getProfitSharePercentages();
@@ -5956,10 +6065,19 @@ function downloadPnLExcel() {
     ['D. BEBAN OPERASIONAL & PEMASARAN (OPEX)', '', ''],
     ['   - Biaya Iklan Marketplace (Shopee & TikTok Ads)', -Number(metrics.totalAdsSpend || 0), 'Iklan Shopee Ads & GMV Max TikTok'],
     ['   - Biaya Iklan Meta (Facebook & Instagram Ads)', -Number(metrics.totalMetaAds || 0), 'Iklan Berbayar Meta CPAS/FB/IG'],
-    ['   - Bahan Packing & Beban Operasional Toko', -Number(metrics.totalOpex || 0), 'Kardus, bubble wrap, gaji, sewa, dll'],
+    ['   - Gaji & Upah Karyawan / Asisten Packing', -Number(metrics.opexSalary || 0), 'Beban Gaji Karyawan Toko & Packing'],
+    ['   - Bahan Packing (Kardus, Bubble Wrap, Lakban, Resi)', -Number(metrics.opexPacking || 0), 'Bahan Pengemasan Paket'],
+    ['   - Sewa Tempat, Gudang & Utilitas / Listrik', -Number(metrics.opexRent || 0), 'Biaya Sewa Tempat & Listrik Toko'],
+    ['   - Logistik & Bensin Pengiriman Paket (Drop-Off)', -Number(metrics.opexShipping || 0), 'Transportasi & Pengiriman Paket'],
+    ['   - Perlengkapan Toko, Label Thermal & Printer', -Number(metrics.opexTools || 0), 'Kertas Resi & Peralatan Toko'],
+    ['   - Beban Operasional Toko Lain-lain', -Number(metrics.opexOther || 0), 'Pengeluaran Toko Lainnya'],
     ['TOTAL BEBAN OPERASIONAL & IKLAN', -totalOpexAndAds, 'Total Pengeluaran Operasional'],
     ['', '', ''],
-    ['LABA BERSIH USAHA (NET PROFIT)', Number(metrics.netProfit || 0), 'Laba Kotor - Total Beban'],
+    ['LABA BERSIH USAHA (NET OPERATING PROFIT)', Number(metrics.netProfit || 0), 'Laba Kotor - Total Beban'],
+    ['', '', ''],
+    ['E. PEMBAYARAN CICILAN HUTANG & PENGELUARAN FINANSIAL', '', ''],
+    ['   - Pembayaran Cicilan Pokok Hutang / Pinjaman Usaha', -Number(metrics.periodDebtRepaid || 0), `Cicilan Periode Ini (Sisa Hutang: ${formatRupiah(metrics.remainingDebt)})`],
+    ['SISA LABA / ARUS KAS BERSIH SETELAH CICILAN', Number(metrics.netProfitAfterDebt || 0), 'Laba Bersih - Cicilan Hutang'],
     ['', '', ''],
     [`ALOKASI & BAGI HASIL DARI LABA BERSIH (${formatPct(pcts.romie)}%, ${formatPct(pcts.akrom)}%, ${formatPct(pcts.tio)}%, ${formatPct(pcts.reinvest)}%)`, '', ''],
     [`   - 1. Hak Penghasilan Romie (${formatPct(pcts.romie)}% - Dicairkan)`, shares.romieAmount, `Bagi Hasil ${formatPct(pcts.romie)}%`],
@@ -6037,9 +6155,18 @@ function downloadPnLCSV() {
     ['D. BEBAN OPERASIONAL & PEMASARAN (OPEX)', ''],
     ['Biaya Iklan Marketplace (Shopee & TikTok Ads)', -(metrics.totalAdsSpend || 0)],
     ['Biaya Iklan Meta (Facebook & Instagram Ads)', -(metrics.totalMetaAds || 0)],
-    ['Bahan Packing & Beban Operasional Toko', -(metrics.totalOpex || 0)],
+    ['Gaji & Upah Karyawan / Asisten Packing', -(metrics.opexSalary || 0)],
+    ['Bahan Packing (Kardus, Bubble Wrap, Lakban, Resi)', -(metrics.opexPacking || 0)],
+    ['Sewa Tempat, Gudang & Listrik', -(metrics.opexRent || 0)],
+    ['Logistik & Bensin Pengiriman Paket (Drop-Off)', -(metrics.opexShipping || 0)],
+    ['Perlengkapan Toko, Label Thermal & Printer', -(metrics.opexTools || 0)],
+    ['Beban Operasional Toko Lain-lain', -(metrics.opexOther || 0)],
     ['Total Beban Operasional & Iklan', -totalOpexAndAds],
-    ['LABA BERSIH USAHA (NET PROFIT)', metrics.netProfit || 0],
+    ['LABA BERSIH USAHA (NET OPERATING PROFIT)', metrics.netProfit || 0],
+    ['', ''],
+    ['E. PEMBAYARAN CICILAN HUTANG & PENGELUARAN FINANSIAL', ''],
+    ['Pembayaran Cicilan Pokok Hutang / Pinjaman Usaha', -(metrics.periodDebtRepaid || 0)],
+    ['SISA LABA / ARUS KAS BERSIH SETELAH CICILAN', metrics.netProfitAfterDebt || 0],
     [`ALOKASI & BAGI HASIL DARI LABA BERSIH (${formatPct(pcts.romie)}%, ${formatPct(pcts.akrom)}%, ${formatPct(pcts.tio)}%, ${formatPct(pcts.reinvest)}%)`, ''],
     [`Hak Penghasilan Romie (${formatPct(pcts.romie)}% - Dicairkan)`, shares.romieAmount],
     [`Hak Penghasilan Akrom (${formatPct(pcts.akrom)}% - Dicairkan)`, shares.akromAmount],
@@ -6173,10 +6300,19 @@ function generateVectorPnLPDF(filename) {
       { type: 'header', title: 'D. BEBAN OPERASIONAL & PEMASARAN (OPEX)', val: '' },
       { type: 'item', title: '  Biaya Iklan Marketplace (Shopee & TikTok Ads)', val: '(' + formatPdfRp(metrics.totalAdsSpend || 0) + ')' },
       { type: 'item', title: '  Biaya Iklan Meta (Facebook & Instagram Ads)', val: '(' + formatPdfRp(metrics.totalMetaAds || 0) + ')' },
-      { type: 'item', title: '  Bahan Packing & Beban Operasional Toko', val: '(' + formatPdfRp(metrics.totalOpex || 0) + ')' },
+      { type: 'item', title: '  Gaji & Upah Karyawan / Asisten Packing', val: '(' + formatPdfRp(metrics.opexSalary || 0) + ')' },
+      { type: 'item', title: '  Bahan Packing (Kardus, Bubble Wrap, Lakban, Resi)', val: '(' + formatPdfRp(metrics.opexPacking || 0) + ')' },
+      { type: 'item', title: '  Sewa Tempat, Gudang & Utilitas / Listrik', val: '(' + formatPdfRp(metrics.opexRent || 0) + ')' },
+      { type: 'item', title: '  Logistik & Bensin Pengiriman Paket (Drop-Off)', val: '(' + formatPdfRp(metrics.opexShipping || 0) + ')' },
+      { type: 'item', title: '  Perlengkapan Toko, Label Thermal & Printer', val: '(' + formatPdfRp(metrics.opexTools || 0) + ')' },
+      { type: 'item', title: '  Beban Operasional Toko Lain-lain', val: '(' + formatPdfRp(metrics.opexOther || 0) + ')' },
       { type: 'subtotal', title: 'Total Beban Operasional & Iklan', val: '(' + formatPdfRp(totalOpexAndAds || 0) + ')' },
       
-      { type: 'grand', title: 'LABA BERSIH USAHA (NET PROFIT)', val: formatPdfRp(metrics.netProfit || 0) },
+      { type: 'grand', title: 'LABA BERSIH USAHA (NET OPERATING PROFIT)', val: formatPdfRp(metrics.netProfit || 0) },
+      
+      { type: 'header', title: 'E. PEMBAYARAN CICILAN HUTANG & FINANSIAL', val: '' },
+      { type: 'item', title: '  Pembayaran Cicilan Pokok Pinjaman / Hutang Usaha', val: '(' + formatPdfRp(metrics.periodDebtRepaid || 0) + ')' },
+      { type: 'subtotal', title: 'SISA LABA / ARUS KAS BERSIH SETELAH CICILAN', val: formatPdfRp(metrics.netProfitAfterDebt || 0) },
       
       { type: 'header', title: `ALOKASI & BAGI HASIL DARI LABA BERSIH (${formatPct(pcts.romie)}%, ${formatPct(pcts.akrom)}%, ${formatPct(pcts.tio)}%, ${formatPct(pcts.reinvest)}%)`, val: '' },
       { type: 'share', title: `  1. Hak Penghasilan Romie (${formatPct(pcts.romie)}% - Dicairkan)`, val: formatPdfRp(shares.romieAmount) },
