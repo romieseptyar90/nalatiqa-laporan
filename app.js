@@ -5669,16 +5669,20 @@ function renderExpensesTable() {
   // Compute breakdown for KPIs from all expenses in the active date/channel/store scope
   let totalHpp = 0;
   let totalOpex = 0;
+  let totalDebtPayment = 0;
   list.forEach(e => {
     const amt = Number(e.amount || 0);
-    if (e.category === 'hpp_belanja') {
+    const cat = (e.category || '').toLowerCase();
+    if (cat === 'hpp_belanja') {
       totalHpp += amt;
+    } else if (cat === 'bayar_hutang' || cat === 'debt_payment' || cat === 'cicilan_hutang') {
+      totalDebtPayment += amt;
     } else {
       totalOpex += amt;
     }
   });
 
-  const totalCombined = totalHpp + totalOpex;
+  const totalCombined = totalHpp + totalOpex + totalDebtPayment;
 
   const hppDisplay = document.getElementById('stock-total-display');
   if (hppDisplay) hppDisplay.textContent = formatRupiah(totalHpp);
