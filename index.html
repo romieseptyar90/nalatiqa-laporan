@@ -1272,13 +1272,11 @@
                 <select id="expense-category-filter" class="form-control" onchange="paginationState.expenses.page = 1; renderExpensesTable()">
                   <option value="all">🔍 Semua Kategori (HPP & Operasional)</option>
                   <option value="hpp_belanja">📦 HPP Belanja Modal Barang (Kulakan)</option>
-                  <option value="packing">📦 Bahan Packing (Kardus, Bubble, Lakban)</option>
+                  <option value="packing">📦 Bahan Packing & Perlengkapan (Kardus, Lakban, Label, Printer)</option>
                   <option value="salary">👥 Gaji / Upah Karyawan & Packing</option>
-                  <option value="shipping">🚚 Ongkir & Bensin Drop-Off Paket</option>
-                  <option value="tools">🏷️ Kertas Label Thermal & Alat Tulis</option>
-                  <option value="rent">🏢 Sewa Tempat, Gudang & Listrik</option>
+                  <option value="rent">🏢 Sewa Tempat, Gudang, Listrik & Internet</option>
                   <option value="bayar_hutang">💳 Cicilan / Pelunasan Hutang Usaha</option>
-                  <option value="other">📑 Beban Lain-lain</option>
+                  <option value="other">📑 Beban Operasional Lain-lain (Logistik, Bensin Drop-Off, dll)</option>
                 </select>
               </div>
             </div>
@@ -1655,23 +1653,15 @@
                   <td class="amount" id="pnl-salary-expense" style="color: var(--danger);">Rp 0</td>
                 </tr>
                 <tr class="item">
-                  <td class="indent">Bahan Packing (Kardus, Bubble Wrap, Lakban, Resi)</td>
+                  <td class="indent">Bahan Packing, Label Thermal & Perlengkapan Toko (Kardus, Lakban, Printer)</td>
                   <td class="amount" id="pnl-packing-expense" style="color: var(--danger);">Rp 0</td>
                 </tr>
                 <tr class="item">
-                  <td class="indent">Sewa Tempat, Gudang & Listrik</td>
+                  <td class="indent">Sewa Tempat, Gudang, Listrik & Internet</td>
                   <td class="amount" id="pnl-rent-expense" style="color: var(--danger);">Rp 0</td>
                 </tr>
                 <tr class="item">
-                  <td class="indent">Logistik & Bensin Pengiriman Paket (Drop-Off)</td>
-                  <td class="amount" id="pnl-shipping-expense" style="color: var(--danger);">Rp 0</td>
-                </tr>
-                <tr class="item">
-                  <td class="indent">Perlengkapan Toko, Label Thermal & Printer</td>
-                  <td class="amount" id="pnl-tools-expense" style="color: var(--danger);">Rp 0</td>
-                </tr>
-                <tr class="item">
-                  <td class="indent">Beban Operasional Toko Lain-lain</td>
+                  <td class="indent">Beban Operasional Toko Lain-lain (Logistik, Bensin Drop-Off, dll)</td>
                   <td class="amount" id="pnl-other-expense" style="color: var(--danger);">Rp 0</td>
                 </tr>
                 <tr class="subtotal">
@@ -2169,13 +2159,11 @@
             <label class="form-label">Kategori Pengeluaran</label>
             <select id="exp-modal-category" class="form-control">
               <option value="hpp_belanja" selected>📦 HPP Belanja Modal Barang (Kulakan / Stok Terjual)</option>
-              <option value="packing">Bahan Packing (Kardus, Bubble Wrap, Lakban, Polymailer)</option>
-              <option value="salary">Gaji / Upah Karyawan & Asisten Packing</option>
-              <option value="tools">Label Thermal, Printer, Alat Tulis</option>
-              <option value="shipping">Logistik / Bensin Drop-Off Paket</option>
-              <option value="rent">Sewa Tempat / Gudang / Listrik</option>
+              <option value="packing">📦 Bahan Packing, Label Thermal & Perlengkapan Toko</option>
+              <option value="salary">👥 Gaji / Upah Karyawan & Asisten Packing</option>
+              <option value="rent">🏢 Sewa Tempat, Gudang, Listrik & Internet</option>
               <option value="bayar_hutang">💳 Pembayaran Cicilan / Angsuran Pokok Hutang</option>
-              <option value="other">Beban Lain-lain</option>
+              <option value="other">📑 Beban Operasional Lain-lain (Logistik, Bensin Drop-Off, dll)</option>
             </select>
           </div>
         </div>
@@ -2474,6 +2462,6 @@
   <!-- html2pdf Library for Direct PDF Export from HTML -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <!-- Core App Logic -->
-  <script src="app.js?v=20261127_01"></script>
+  <script src="app.js?v=20261127_04"></script>
 </body>
 </html>

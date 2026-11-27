@@ -880,7 +880,6 @@ function computeMetrics() {
   let opexPacking = 0;
   let opexRent = 0;
   let opexShipping = 0;
-  let opexTools = 0;
   let opexOther = 0;
   let opexDebt = 0;
 
@@ -891,14 +890,14 @@ function computeMetrics() {
       hppFromExpenses += amt;
     } else if (cat === 'salary') {
       opexSalary += amt;
-    } else if (cat === 'packing') {
+    } else if (cat === 'packing' || cat === 'tools') {
+      // Kategori perlengkapan toko, label thermal dan printer digabung ke bahan packing
       opexPacking += amt;
     } else if (cat === 'rent') {
       opexRent += amt;
-    } else if (cat === 'shipping') {
-      opexShipping += amt;
-    } else if (cat === 'tools') {
-      opexTools += amt;
+    } else if (cat === 'shipping' || cat === 'other') {
+      // Kategori Logistik & bensin drop-off digabung ke Beban Operasional Lain-lain
+      opexOther += amt;
     } else if (cat === 'bayar_hutang' || cat === 'debt_payment' || cat === 'cicilan_hutang') {
       opexDebt += amt;
     } else {
@@ -906,7 +905,7 @@ function computeMetrics() {
     }
   });
 
-  const totalOpex = opexSalary + opexPacking + opexRent + opexShipping + opexTools + opexOther;
+  const totalOpex = opexSalary + opexPacking + opexRent + opexShipping + opexOther;
 
   let totalStockPurchases = 0;
   let totalStockQty = 0;
@@ -5697,7 +5696,13 @@ function renderExpensesTable() {
   // Category filter
   const catFilter = document.getElementById('expense-category-filter')?.value || 'all';
   if (catFilter !== 'all') {
-    list = list.filter(e => e.category === catFilter);
+    if (catFilter === 'packing') {
+      list = list.filter(e => e.category === 'packing' || e.category === 'tools');
+    } else if (catFilter === 'other') {
+      list = list.filter(e => e.category === 'other' || e.category === 'shipping');
+    } else {
+      list = list.filter(e => e.category === catFilter);
+    }
   }
 
   // Search filter
@@ -5731,29 +5736,27 @@ function renderExpensesTable() {
 
   const categoryNames = {
     hpp_belanja: '📦 HPP Belanja Modal',
-    packing: 'Bahan Packing',
+    packing: '📦 Packing & Perlengkapan',
+    tools: '📦 Packing & Perlengkapan',
     salary: '👥 Gaji & Upah',
-    shipping: 'Ongkir & Drop Off',
-    tools: 'Peralatan & Label',
-    rent: 'Sewa & Listrik',
+    shipping: '📑 Operasional & Logistik',
+    rent: '🏢 Sewa, Listrik & Internet',
     bayar_hutang: '💳 Cicilan Hutang',
-    other: 'Lain-lain'
+    other: '📑 Operasional & Logistik'
   };
 
   tbody.innerHTML = paged.items.map(e => {
     let catBadge = '';
     if (e.category === 'hpp_belanja') {
       catBadge = `<span class="badge" style="background:#fef3c7;color:#b45309;font-weight:700;border:1px solid #fde68a;">📦 HPP Belanja Modal</span>`;
-    } else if (e.category === 'packing') {
-      catBadge = `<span class="badge" style="background:#f0fdf4;color:#166534;font-weight:600;border:1px solid #bbf7d0;">📦 Bahan Packing</span>`;
+    } else if (e.category === 'packing' || e.category === 'tools') {
+      catBadge = `<span class="badge" style="background:#f0fdf4;color:#166534;font-weight:600;border:1px solid #bbf7d0;">📦 Packing & Perlengkapan</span>`;
     } else if (e.category === 'salary') {
       catBadge = `<span class="badge" style="background:#f5f3ff;color:#6b21a8;font-weight:600;border:1px solid #ddd6fe;">👥 Gaji & Upah</span>`;
-    } else if (e.category === 'shipping') {
-      catBadge = `<span class="badge" style="background:#eff6ff;color:#1e40af;font-weight:600;border:1px solid #bfdbfe;">🚚 Ongkir / Drop-Off</span>`;
-    } else if (e.category === 'tools') {
-      catBadge = `<span class="badge" style="background:#fdf4ff;color:#86198f;font-weight:600;border:1px solid #f5d0fe;">🏷️ Alat & Label</span>`;
+    } else if (e.category === 'shipping' || e.category === 'other') {
+      catBadge = `<span class="badge badge-neutral">📑 Beban Operasional & Logistik</span>`;
     } else if (e.category === 'rent') {
-      catBadge = `<span class="badge" style="background:#fff7ed;color:#9a3412;font-weight:600;border:1px solid #fed7aa;">🏢 Sewa & Listrik</span>`;
+      catBadge = `<span class="badge" style="background:#fff7ed;color:#9a3412;font-weight:600;border:1px solid #fed7aa;">🏢 Sewa, Listrik & Internet</span>`;
     } else if (e.category === 'bayar_hutang' || e.category === 'debt_payment') {
       catBadge = `<span class="badge" style="background:#fff1f2;color:#be123c;font-weight:600;border:1px solid #fecdd3;">💳 Cicilan Hutang</span>`;
     } else {
@@ -5921,9 +5924,6 @@ function renderPnL() {
   const elShipping = document.getElementById('pnl-shipping-expense');
   if (elShipping) elShipping.textContent = metrics.opexShipping > 0 ? `(${formatRupiah(metrics.opexShipping)})` : 'Rp 0';
 
-  const elTools = document.getElementById('pnl-tools-expense');
-  if (elTools) elTools.textContent = metrics.opexTools > 0 ? `(${formatRupiah(metrics.opexTools)})` : 'Rp 0';
-
   const elOther = document.getElementById('pnl-other-expense');
   if (elOther) elOther.textContent = metrics.opexOther > 0 ? `(${formatRupiah(metrics.opexOther)})` : 'Rp 0';
 
@@ -6066,11 +6066,9 @@ function downloadPnLExcel() {
     ['   - Biaya Iklan Marketplace (Shopee & TikTok Ads)', -Number(metrics.totalAdsSpend || 0), 'Iklan Shopee Ads & GMV Max TikTok'],
     ['   - Biaya Iklan Meta (Facebook & Instagram Ads)', -Number(metrics.totalMetaAds || 0), 'Iklan Berbayar Meta CPAS/FB/IG'],
     ['   - Gaji & Upah Karyawan / Asisten Packing', -Number(metrics.opexSalary || 0), 'Beban Gaji Karyawan Toko & Packing'],
-    ['   - Bahan Packing (Kardus, Bubble Wrap, Lakban, Resi)', -Number(metrics.opexPacking || 0), 'Bahan Pengemasan Paket'],
-    ['   - Sewa Tempat, Gudang & Utilitas / Listrik', -Number(metrics.opexRent || 0), 'Biaya Sewa Tempat & Listrik Toko'],
-    ['   - Logistik & Bensin Pengiriman Paket (Drop-Off)', -Number(metrics.opexShipping || 0), 'Transportasi & Pengiriman Paket'],
-    ['   - Perlengkapan Toko, Label Thermal & Printer', -Number(metrics.opexTools || 0), 'Kertas Resi & Peralatan Toko'],
-    ['   - Beban Operasional Toko Lain-lain', -Number(metrics.opexOther || 0), 'Pengeluaran Toko Lainnya'],
+    ['   - Bahan Packing, Label Thermal & Perlengkapan Toko', -Number(metrics.opexPacking || 0), 'Kardus, Lakban, Resi, Printer & Toko'],
+    ['   - Sewa Tempat, Gudang, Listrik & Internet', -Number(metrics.opexRent || 0), 'Biaya Sewa Tempat, Listrik & Internet Toko'],
+    ['   - Beban Operasional Toko Lain-lain (Logistik, Bensin Drop-Off & Umum)', -Number(metrics.opexOther || 0), 'Logistik, Bensin Drop-Off & Operasional Lainnya'],
     ['TOTAL BEBAN OPERASIONAL & IKLAN', -totalOpexAndAds, 'Total Pengeluaran Operasional'],
     ['', '', ''],
     ['LABA BERSIH USAHA (NET OPERATING PROFIT)', Number(metrics.netProfit || 0), 'Laba Kotor - Total Beban'],
@@ -6156,11 +6154,9 @@ function downloadPnLCSV() {
     ['Biaya Iklan Marketplace (Shopee & TikTok Ads)', -(metrics.totalAdsSpend || 0)],
     ['Biaya Iklan Meta (Facebook & Instagram Ads)', -(metrics.totalMetaAds || 0)],
     ['Gaji & Upah Karyawan / Asisten Packing', -(metrics.opexSalary || 0)],
-    ['Bahan Packing (Kardus, Bubble Wrap, Lakban, Resi)', -(metrics.opexPacking || 0)],
-    ['Sewa Tempat, Gudang & Listrik', -(metrics.opexRent || 0)],
-    ['Logistik & Bensin Pengiriman Paket (Drop-Off)', -(metrics.opexShipping || 0)],
-    ['Perlengkapan Toko, Label Thermal & Printer', -(metrics.opexTools || 0)],
-    ['Beban Operasional Toko Lain-lain', -(metrics.opexOther || 0)],
+    ['Bahan Packing, Label Thermal & Perlengkapan Toko', -(metrics.opexPacking || 0)],
+    ['Sewa Tempat, Gudang, Listrik & Internet', -(metrics.opexRent || 0)],
+    ['Beban Operasional Toko Lain-lain (Logistik, Bensin Drop-Off & Umum)', -(metrics.opexOther || 0)],
     ['Total Beban Operasional & Iklan', -totalOpexAndAds],
     ['LABA BERSIH USAHA (NET OPERATING PROFIT)', metrics.netProfit || 0],
     ['', ''],
@@ -6301,11 +6297,9 @@ function generateVectorPnLPDF(filename) {
       { type: 'item', title: '  Biaya Iklan Marketplace (Shopee & TikTok Ads)', val: '(' + formatPdfRp(metrics.totalAdsSpend || 0) + ')' },
       { type: 'item', title: '  Biaya Iklan Meta (Facebook & Instagram Ads)', val: '(' + formatPdfRp(metrics.totalMetaAds || 0) + ')' },
       { type: 'item', title: '  Gaji & Upah Karyawan / Asisten Packing', val: '(' + formatPdfRp(metrics.opexSalary || 0) + ')' },
-      { type: 'item', title: '  Bahan Packing (Kardus, Bubble Wrap, Lakban, Resi)', val: '(' + formatPdfRp(metrics.opexPacking || 0) + ')' },
-      { type: 'item', title: '  Sewa Tempat, Gudang & Utilitas / Listrik', val: '(' + formatPdfRp(metrics.opexRent || 0) + ')' },
-      { type: 'item', title: '  Logistik & Bensin Pengiriman Paket (Drop-Off)', val: '(' + formatPdfRp(metrics.opexShipping || 0) + ')' },
-      { type: 'item', title: '  Perlengkapan Toko, Label Thermal & Printer', val: '(' + formatPdfRp(metrics.opexTools || 0) + ')' },
-      { type: 'item', title: '  Beban Operasional Toko Lain-lain', val: '(' + formatPdfRp(metrics.opexOther || 0) + ')' },
+      { type: 'item', title: '  Bahan Packing, Label Thermal & Perlengkapan Toko', val: '(' + formatPdfRp(metrics.opexPacking || 0) + ')' },
+      { type: 'item', title: '  Sewa Tempat, Gudang, Listrik & Internet', val: '(' + formatPdfRp(metrics.opexRent || 0) + ')' },
+      { type: 'item', title: '  Beban Operasional Toko Lain-lain (Logistik, Bensin & Umum)', val: '(' + formatPdfRp(metrics.opexOther || 0) + ')' },
       { type: 'subtotal', title: 'Total Beban Operasional & Iklan', val: '(' + formatPdfRp(totalOpexAndAds || 0) + ')' },
       
       { type: 'grand', title: 'LABA BERSIH USAHA (NET OPERATING PROFIT)', val: formatPdfRp(metrics.netProfit || 0) },
@@ -7050,7 +7044,10 @@ function editExpense(id) {
   }
 
   document.getElementById('exp-modal-date').value = item.date || new Date().toISOString().split('T')[0];
-  document.getElementById('exp-modal-category').value = item.category || 'hpp_belanja';
+  let modalCat = item.category || 'hpp_belanja';
+  if (modalCat === 'shipping') modalCat = 'other';
+  if (modalCat === 'tools') modalCat = 'packing';
+  document.getElementById('exp-modal-category').value = modalCat;
   document.getElementById('exp-modal-title').value = item.title || '';
   document.getElementById('exp-modal-amount').value = item.amount || '';
   document.getElementById('exp-modal-payment').value = item.paymentMethod || 'Transfer BCA';
